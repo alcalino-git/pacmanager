@@ -148,7 +148,6 @@ class SearchComponent : public Gtk::Box {
 
             label->signal_clicked().connect([this, p, label](){
                 std::jthread([this, label](){
-                    label->package.refetch_data();
                     this->signal_changed().emit(label->package);
                 }).detach();
             });

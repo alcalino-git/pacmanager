@@ -45,6 +45,8 @@ vector<string> get_command_line_output(string command) {
 }
 
 
+
+//TODO: Actually re implement this entire thing, it sucks
 class Package {
     public:
     string name;
@@ -80,10 +82,11 @@ class Package {
         this->name = name;
         this->description = description;
     }
-
+    
+    //TODO: This doesnt work. Needs to use `pacman -Si` instead
     void refetch_data() {
-        auto lines = get_command_line_output("pacman -Ss \"" + this->extract_name() + "\"");
-        this->name = lines[0];
+        auto lines = get_command_line_output("pacman -Si \"" + this->extract_name() + "\"");
+        this->name = split_by_char(lines[1], ':')[1];
         this->description = lines[1];
     }
 
@@ -119,6 +122,7 @@ class PackageButton : public Gtk::Button {
 
     Gtk::Box content;
     Gtk::Label name;
+    Gtk::Image icon;
 
     public:
     Package package;
@@ -136,11 +140,30 @@ class PackageButton : public Gtk::Button {
         content.set_vexpand(true);
         content.set_orientation(Gtk::Orientation::HORIZONTAL);
 
+
+        icon.set_halign(Gtk::Align::END);
+
+        content.append(name);
+        content.append(icon);
+        this->set_child(content);
+
+        this->signal_clicked().connect([this]() {
+            std::jthread([this]() {
+                this->package.refetch_data();
+                Glib::signal_idle().connect_once([this](){this->update();});
+            }).detach();
+        });
+
+        this->update();
+    }
+
+    ///Re-renders the entire button
+    void update() {
         name.set_text(package.extract_name());
         name.set_halign(Gtk::Align::START);
-        content.append(name);
+        name.set_hexpand(true);
 
-        this->set_child(content);
+        icon.set_from_icon_name( this->package.is_installed() ? "emblem-default" : "system-software-install" );
     }
 
 
