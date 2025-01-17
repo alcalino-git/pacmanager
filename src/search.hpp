@@ -57,18 +57,31 @@ class SearchComponent : public Gtk::Box {
 
     vector<Package> packages;
     std::mutex mutex;
+    std::jthread worker;
 
     SearchComponent() {
+        Glib::signal_idle().connect([this]() {
+            this->render();
+            return true;
+        });
+
         set_orientation(Gtk::Orientation::VERTICAL);
 
         textInput = Gtk::Entry();
         textInput.signal_activate().connect([this]() {
-            std::jthread([this]() {
-                auto packages = get_packages(this->textInput.get_text());
-                std::cout << "Query for " << this->textInput.get_text() << " recieved " << packages.size() << " packages\n"; 
+
+            //SYNC
+            auto query = this->textInput.get_text();
+            this->worker.request_stop(); 
+            this->worker = std::jthread([this, query]() {
+                auto packages = get_packages(query);
+                this->mutex.lock();
+                std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
                 this->packages = packages;
-                this->render();
-            }).detach();
+                //this->render();
+                this->mutex.unlock();
+            });
+            this->worker.detach();
 
         });
         this->append(textInput);
@@ -84,13 +97,7 @@ class SearchComponent : public Gtk::Box {
     void render() {
         label.set_text("Found " + std::to_string( packages.size() ) + " package(s)");
 
-        /*
-        IDEA:
-        Protect `packages` with a mutex
-        check if mutex is currently locked
-        if so, do a Glib idle and try again
-        otherwise, acquite the lock and render
-        */
+
        for (auto c: packages_components.get_children()) {packages_components.remove(*c);};
 
        for (auto p: this->packages ) {
