@@ -21,9 +21,19 @@ using namespace std;
 
 class SearchComponent : public Gtk::Box {
 
+    using type_signal_package_changed = sigc::signal<void(Package)>;
+
+
+
     public:
+
+    type_signal_package_changed m_signal_changed;
+    type_signal_package_changed signal_changed() {
+        return m_signal_changed;
+    };
+
     Gtk::SearchEntry text_input;
-    Gtk::Label label;
+    Gtk::Label found_label;
     Gtk::ScrolledWindow scroll;
     Gtk::Box packages_components;
     Gtk::Box top_bar;
@@ -74,10 +84,6 @@ class SearchComponent : public Gtk::Box {
     }
 
     SearchComponent() {
-        // Glib::signal_idle().connect([this]() {
-        //     this->render();
-        //     return true;
-        // });
         this->handle_input_submit();
         this->page = 1;
 
@@ -113,7 +119,7 @@ class SearchComponent : public Gtk::Box {
         scroll.set_vexpand(true);
 
         this->append(top_bar);
-        this->append(label);
+        this->append(found_label);
         this->append(range_label);
         this->append(scroll);
 
@@ -121,17 +127,17 @@ class SearchComponent : public Gtk::Box {
     }
 
     void render() {
+        
         page_label.set_text(std::to_string(page) + "/" + std::to_string( this->get_num_pages() ));
 
         this->scroll.get_vadjustment()->set_value(0);
 
+        for (auto c: packages_components.get_children()) {packages_components.remove(*c);};
         packages_components.set_orientation(Gtk::Orientation::VERTICAL);
         packages_components.set_vexpand(true);
+        
 
-        label.set_text("Found " + std::to_string( packages.size() ) + " package(s)");
-
-
-        for (auto c: packages_components.get_children()) {packages_components.remove(*c);};
+        found_label.set_text("Found " + std::to_string( packages.size() ) + " package(s)");
 
         auto start = ((this->page-1) * PACKAGES_PER_PAGE);
         auto end = ( this->page * PACKAGES_PER_PAGE );
@@ -141,7 +147,11 @@ class SearchComponent : public Gtk::Box {
 
         for (int i = start; i < end; i++ ) {
             auto p = this->packages[i];
-            auto label = Gtk::manage( new PackageComponent(p) );
+            auto label = Gtk::manage( new PackageButton(p) );
+            label->signal_clicked().connect([this, p](){
+                this->signal_changed().emit(p);
+            });
+            label->set_vexpand(false);
             packages_components.append(*label);
         }
 

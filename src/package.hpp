@@ -1,3 +1,5 @@
+#pragma once
+
 #include <string>
 #include <vector>
 #include <gtkmm.h>
@@ -22,6 +24,26 @@ vector<string> split_by_char(string s, char c) {
 }
 
 
+/// @brief Runs `command` and returns its full output. Highly blocking
+/// @param command 
+/// @return 
+vector<string> get_command_line_output(string command) {
+    FILE *result;
+    result = popen(command.c_str(), "r");
+
+    char buffer[1024];
+    int line_number = 0;
+
+    std::vector<std::string> lines{};
+    while(fgets(buffer, sizeof(buffer), result)) {
+        lines.push_back(buffer);
+    }
+
+    pclose(result);
+    return lines;
+}
+
+
 class Package {
     public:
     string name;
@@ -31,23 +53,13 @@ class Package {
     /// @param s string pacman -Ss will use
     /// @return a list of found packages
     static vector<Package> get_packages(std::string search) {
-        //if (search == "xo") {search = "x";} 
 
-        char command[1024];
-        sprintf(command, "pacman -Ss \"%s\"", search.c_str());
-        //std::cout << "WILL ATTEMPT TO RUN: " << command << "\n";
-
-        FILE *result;
-        result = popen(command, "r");
-        
-        char buffer[1024];
-        int line_number = 0;
+        auto lines = get_command_line_output("pacman -Ss " + search);
 
         std::vector<std::string> names{};
         std::vector<std::string> descriptions{}; 
-        while(fgets(buffer, sizeof(buffer), result)) {
-            if (line_number % 2 == 0) {names.push_back(std::string(buffer));} else {descriptions.push_back(std::string(buffer));}
-            line_number++;
+        for (int i = 0; i < lines.size(); i++) {
+            if (i % 2 == 0) {names.push_back(lines[i]);} else {descriptions.push_back(lines[i]);}
         }
 
         vector<Package> packages{};
@@ -55,8 +67,6 @@ class Package {
             auto package = Package(names[i], descriptions[i]);
             packages.push_back(package);
         }
-
-        pclose(result);
         return packages;
     }
 
@@ -79,9 +89,24 @@ class Package {
     bool is_installed() {
         return this->name.contains("[installed]");
     }
+
+    void install() {
+        auto output = get_command_line_output( "pkexec pacman --noconfirm  -Syy " + this->extract_name() );
+        for (auto l: output) {
+            std::cout << l << "\n";
+        }
+    }
+
+    void uninstall() {
+        auto output = get_command_line_output( "pkexec pacman --noconfirm  -R " + this->extract_name() );
+        for (auto l: output) {
+            std::cout << l << "\n";
+        }
+    }
 };
 
-class PackageComponent : public Gtk::Button {
+
+class PackageButton : public Gtk::Button {
 
     Gtk::Box content;
     Gtk::Label name;
@@ -90,7 +115,7 @@ class PackageComponent : public Gtk::Button {
     Package package;
 
     public:
-    PackageComponent(Package package) {
+    PackageButton(Package package) {
         this->package = package;
         this->set_hexpand(true);
         this->set_margin(10);
@@ -98,9 +123,6 @@ class PackageComponent : public Gtk::Button {
         this->set_sensitive(true);   // Ensures the button is sensitive (not disabled)
 
         
-        this->signal_clicked().connect([this](){
-            std::cout << "Clicked over " << this->package.name << "\n";
-        });
 
         content.set_hexpand(true);
         content.set_vexpand(true);
@@ -114,5 +136,59 @@ class PackageComponent : public Gtk::Button {
     }
 
 
+};
+
+class PackageDisplay : public Gtk::Box {
+    Package package;
+    Gtk::Label name;
+    Gtk::Box controls_box;
+    Gtk::Button install; //Doubles as update button since installing an already installed package updates it
+    Gtk::Button uninstall;
+
+    public:
+    PackageDisplay() {
+        this->package = Package("none/no-package noversion", "NO DESCRIPTION");
+
+        install.signal_clicked().connect([this](){
+            this->package.install();
+            this->render();
+        });
+
+        uninstall.signal_clicked().connect([this](){
+            this->package.uninstall();
+            this->render();
+        });
+
+        this->render();
+    }
+
+    void set_package(Package package) {
+        this->package = package;
+        this->render();
+    } 
+
+    void render() {
+        for (auto c: this->get_children()) {this->remove(*c);}
+
+        this->set_orientation(Gtk::Orientation::VERTICAL);
+        this->set_hexpand(true);
+        this->set_vexpand(true);
+        this->set_valign(Gtk::Align::CENTER);
+
+        name.set_text(package.extract_name());
+
+        install.set_label( package.is_installed() ? "Update" : "Install" );
+
+        uninstall.set_label( "Uninstall" );
+
+
+        controls_box.set_orientation(Gtk::Orientation::HORIZONTAL);
+        controls_box.append(install);
+        controls_box.append(uninstall);
+        controls_box.set_halign(Gtk::Align::CENTER);
+
+        append(name);
+        append(controls_box);
+    }
 
 };
