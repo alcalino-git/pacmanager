@@ -82,6 +82,7 @@ class SearchComponent : public Gtk::Box {
     Gtk::Button page_up;
     Gtk::Button page_down;
     Gtk::Label page_label;
+    Gtk::Label range_label;
 
     vector<Package> packages;
     std::mutex mutex;
@@ -107,6 +108,7 @@ class SearchComponent : public Gtk::Box {
             //std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
             this->packages = packages;
             this->scroll.get_vadjustment()->set_value(0);
+            this->page = 1;
             this->mutex.unlock();
         });
         this->worker.detach();
@@ -123,7 +125,7 @@ class SearchComponent : public Gtk::Box {
             this->render();
             return true;
         });
-        this->page = 0;
+        this->page = 1;
 
 
         set_orientation(Gtk::Orientation::VERTICAL);
@@ -134,8 +136,14 @@ class SearchComponent : public Gtk::Box {
         page_down = Gtk::Button("<");
         page_up = Gtk::Button(">");
 
-        page_down.signal_clicked().connect([this](){this->page--;});
-        page_up.signal_clicked().connect([this](){this->page++;});
+        page_down.signal_clicked().connect([this](){
+            this->page--;
+            if (this->page < 1) {this->page = this->get_num_pages();}
+        });
+        page_up.signal_clicked().connect([this](){
+            this->page++;
+            if (this->page > this->get_num_pages()) {this->page = 1;}            
+        });
 
         text_input = Gtk::Entry();
         text_input.set_hexpand(true);
@@ -146,11 +154,11 @@ class SearchComponent : public Gtk::Box {
         top_bar.append(page_label);
         top_bar.append(page_up);
 
-        this->append(top_bar);
-
-        this->append(label);
-
         scroll.set_vexpand(true);
+
+        this->append(top_bar);
+        this->append(label);
+        this->append(range_label);
         this->append(scroll);
 
         
@@ -165,14 +173,21 @@ class SearchComponent : public Gtk::Box {
         label.set_text("Found " + std::to_string( packages.size() ) + " package(s)");
 
 
-       for (auto c: packages_components.get_children()) {packages_components.remove(*c);};
+        for (auto c: packages_components.get_children()) {packages_components.remove(*c);};
 
-       for (auto p: this->packages ) {
+        auto start = ((this->page-1) * 50);
+        auto end = ( this->page * 50 );
+        if (end >= this->packages.size()) {end = this->packages.size();}
+
+        range_label.set_text("Rendering packages " + std::to_string(start) + "-" + std::to_string(end));
+
+        for (int i = start; i < end; i++ ) {
+            auto p = this->packages[i];
             auto label = Gtk::manage( new Gtk::Label(p.name) );
             packages_components.append(*label);
-       }
+        }
 
-       this->scroll.set_child(this->packages_components);
+        this->scroll.set_child(this->packages_components);
   
     }
 
