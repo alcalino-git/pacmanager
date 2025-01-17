@@ -1,5 +1,6 @@
 #include <string>
 #include <vector>
+#include <gtkmm.h>
 using namespace std;
 
 vector<string> split_by_char(string s, char c) {
@@ -80,3 +81,38 @@ class Package {
     }
 };
 
+class PackageComponent : public Gtk::Button {
+
+    Gtk::Box content;
+    Gtk::Label name;
+
+
+    Package package;
+
+    public:
+    PackageComponent(Package package) {
+        this->package = package;
+        this->set_hexpand(true);
+        this->set_margin(10);
+        this->set_can_focus(true);   // Allows the button to receive focus
+        this->set_sensitive(true);   // Ensures the button is sensitive (not disabled)
+
+        
+        this->signal_clicked().connect([this](){
+            std::cout << "Clicked over " << this->package.name << "\n";
+        });
+
+        content.set_hexpand(true);
+        content.set_vexpand(true);
+        content.set_orientation(Gtk::Orientation::HORIZONTAL);
+
+        name.set_text(package.name);
+        name.set_halign(Gtk::Align::START);
+        content.append(name);
+
+        this->set_child(content);
+    }
+
+
+
+};

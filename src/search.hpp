@@ -11,7 +11,7 @@
 #include "package.hpp"
 using namespace std;
 
-#define PACKAGES_PER_PAGE 50
+#define PACKAGES_PER_PAGE 100
 
 
 
@@ -22,7 +22,7 @@ using namespace std;
 class SearchComponent : public Gtk::Box {
 
     public:
-    Gtk::Entry text_input;
+    Gtk::SearchEntry text_input;
     Gtk::Label label;
     Gtk::ScrolledWindow scroll;
     Gtk::Box packages_components;
@@ -55,9 +55,14 @@ class SearchComponent : public Gtk::Box {
             this->mutex.lock();
             //std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
             this->packages = packages;
-            this->scroll.get_vadjustment()->set_value(0);
             this->page = 1;
+
+            Glib::signal_idle().connect_once([this]() {
+                this->render();
+            });
+
             this->mutex.unlock();
+
         });
         this->worker.detach();
    }
@@ -69,10 +74,11 @@ class SearchComponent : public Gtk::Box {
     }
 
     SearchComponent() {
-        Glib::signal_idle().connect([this]() {
-            this->render();
-            return true;
-        });
+        // Glib::signal_idle().connect([this]() {
+        //     this->render();
+        //     return true;
+        // });
+        this->handle_input_submit();
         this->page = 1;
 
 
@@ -87,13 +93,15 @@ class SearchComponent : public Gtk::Box {
         page_down.signal_clicked().connect([this](){
             this->page--;
             if (this->page < 1) {this->page = this->get_num_pages();}
+            this->render();
         });
         page_up.signal_clicked().connect([this](){
             this->page++;
-            if (this->page > this->get_num_pages()) {this->page = 1;}            
+            if (this->page > this->get_num_pages()) {this->page = 1;}  
+            this->render();          
         });
 
-        text_input = Gtk::Entry();
+        text_input = Gtk::SearchEntry();
         text_input.set_hexpand(true);
         text_input.signal_activate().connect([this]() {this->handle_input_submit();});
 
@@ -115,6 +123,8 @@ class SearchComponent : public Gtk::Box {
     void render() {
         page_label.set_text(std::to_string(page) + "/" + std::to_string( this->get_num_pages() ));
 
+        this->scroll.get_vadjustment()->set_value(0);
+
         packages_components.set_orientation(Gtk::Orientation::VERTICAL);
         packages_components.set_vexpand(true);
 
@@ -123,15 +133,15 @@ class SearchComponent : public Gtk::Box {
 
         for (auto c: packages_components.get_children()) {packages_components.remove(*c);};
 
-        auto start = ((this->page-1) * 50);
-        auto end = ( this->page * 50 );
+        auto start = ((this->page-1) * PACKAGES_PER_PAGE);
+        auto end = ( this->page * PACKAGES_PER_PAGE );
         if (end >= this->packages.size()) {end = this->packages.size();}
 
         range_label.set_text("Rendering packages " + std::to_string(start) + "-" + std::to_string(end));
 
         for (int i = start; i < end; i++ ) {
             auto p = this->packages[i];
-            auto label = Gtk::manage( new Gtk::Label(p.extract_name()) );
+            auto label = Gtk::manage( new PackageComponent(p) );
             packages_components.append(*label);
         }
 
