@@ -10,6 +10,8 @@
 #include <bits/stdc++.h>
 using namespace std;
 
+#define PACKAGES_PER_PAGE 50
+
 class Package {
     public:
     string name;
@@ -66,20 +68,25 @@ vector<Package> get_packages(std::string search) {
     return packages;
 }
 
-#define PACKAGES_PER_PAGE 50
+
 
 
 class SearchComponent : public Gtk::Box {
 
     public:
-    Gtk::Entry textInput;
+    Gtk::Entry text_input;
     Gtk::Label label;
     Gtk::ScrolledWindow scroll;
     Gtk::Box packages_components;
+    Gtk::Box top_bar;
+    Gtk::Button page_up;
+    Gtk::Button page_down;
+    Gtk::Label page_label;
 
     vector<Package> packages;
     std::mutex mutex;
     std::jthread worker;
+    int page;
 
     /*
     Maybe an an std::atomic(0) int to count how many threads are currently running
@@ -87,7 +94,7 @@ class SearchComponent : public Gtk::Box {
     */
 
    void handle_input_submit() {
-        auto query = this->textInput.get_text();
+        auto query = this->text_input.get_text();
         this->worker.request_stop(); 
 
         this->worker = std::jthread([this, query](std::stop_token stopToken) {
@@ -106,20 +113,40 @@ class SearchComponent : public Gtk::Box {
    }
 
 
+    ///Returns how many pages of `PACKAGES_PER_PAGE` size can exist given the current amount of packages
+    int get_num_pages() {
+        return std::ceil((float)this->packages.size() / PACKAGES_PER_PAGE);
+    }
 
     SearchComponent() {
         Glib::signal_idle().connect([this]() {
             this->render();
             return true;
         });
+        this->page = 0;
 
 
         set_orientation(Gtk::Orientation::VERTICAL);
         set_vexpand(true);
 
-        textInput = Gtk::Entry();
-        textInput.signal_activate().connect([this]() {this->handle_input_submit();});
-        this->append(textInput);
+        top_bar.set_orientation(Gtk::Orientation::HORIZONTAL);
+
+        page_down = Gtk::Button("<");
+        page_up = Gtk::Button(">");
+
+        page_down.signal_clicked().connect([this](){this->page--;});
+        page_up.signal_clicked().connect([this](){this->page++;});
+
+        text_input = Gtk::Entry();
+        text_input.set_hexpand(true);
+        text_input.signal_activate().connect([this]() {this->handle_input_submit();});
+
+        top_bar.append(text_input);
+        top_bar.append(page_down);
+        top_bar.append(page_label);
+        top_bar.append(page_up);
+
+        this->append(top_bar);
 
         this->append(label);
 
@@ -130,8 +157,11 @@ class SearchComponent : public Gtk::Box {
     }
 
     void render() {
+        page_label.set_text(std::to_string(page) + "/" + std::to_string( this->get_num_pages() ));
+
         packages_components.set_orientation(Gtk::Orientation::VERTICAL);
         packages_components.set_vexpand(true);
+
         label.set_text("Found " + std::to_string( packages.size() ) + " package(s)");
 
 
