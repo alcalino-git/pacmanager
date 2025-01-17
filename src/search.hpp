@@ -8,65 +8,13 @@
 #include <format>
 #include <iostream>
 #include <bits/stdc++.h>
+#include "package.hpp"
 using namespace std;
 
 #define PACKAGES_PER_PAGE 50
 
-class Package {
-    public:
-    string name;
-    string description;
-
-    Package() {
-        this->name = "";
-        this->description = "";
-    }
-
-    Package(string name, string description) {
-        this->name = name;
-        this->description = description;
-    }
-};
-
-///Blocks the main thead for `s` seconds
-void sleep(int s) {
-    std::this_thread::sleep_for( std::chrono::seconds(s) );
-}
 
 
-
-/// @brief Dummy implementation for testing purposes
-/// @param s string pacman -Ss will use
-/// @return a list of found packages
-vector<Package> get_packages(std::string search) {
-    //if (search == "xo") {search = "x";} 
-
-    char command[1024];
-    sprintf(command, "pacman -Ss \"%s\"", search.c_str());
-    //std::cout << "WILL ATTEMPT TO RUN: " << command << "\n";
-
-    FILE *result;
-    result = popen(command, "r");
-    
-    char buffer[1024];
-    int line_number = 0;
-
-    std::vector<std::string> names{};
-    std::vector<std::string> descriptions{}; 
-    while(fgets(buffer, sizeof(buffer), result)) {
-        if (line_number % 2 == 0) {names.push_back(std::string(buffer));} else {descriptions.push_back(std::string(buffer));}
-        line_number++;
-    }
-
-    vector<Package> packages{};
-    for (int i = 0; i < names.size(); i++) {
-        auto package = Package(names[i], descriptions[i]);
-        packages.push_back(package);
-    }
-
-    pclose(result);
-    return packages;
-}
 
 
 
@@ -99,7 +47,7 @@ class SearchComponent : public Gtk::Box {
         this->worker.request_stop(); 
 
         this->worker = std::jthread([this, query](std::stop_token stopToken) {
-            auto packages = get_packages(query);
+            auto packages = Package::get_packages(query);
 
             if (stopToken.stop_requested()) {
                 return; //Do nothing
@@ -183,7 +131,7 @@ class SearchComponent : public Gtk::Box {
 
         for (int i = start; i < end; i++ ) {
             auto p = this->packages[i];
-            auto label = Gtk::manage( new Gtk::Label(p.name) );
+            auto label = Gtk::manage( new Gtk::Label(p.extract_name()) );
             packages_components.append(*label);
         }
 
