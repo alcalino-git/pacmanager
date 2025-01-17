@@ -45,8 +45,6 @@ vector<string> get_command_line_output(string command) {
 }
 
 
-
-//TODO: Actually re implement this entire thing, it sucks
 class Package {
     public:
     string name;
@@ -83,10 +81,10 @@ class Package {
         this->description = description;
     }
     
-    //TODO: This doesnt work. Needs to use `pacman -Si` instead
+    //TODO: This doesnt work. Needs to use `pacman -Si`
     void refetch_data() {
-        auto lines = get_command_line_output("pacman -Si \"" + this->extract_name() + "\"");
-        this->name = split_by_char(lines[1], ':')[1];
+        auto lines = get_command_line_output("pacman -Ss \"" + this->extract_name() + "\"");
+        this->name = lines[0];
         this->description = lines[1];
     }
 
