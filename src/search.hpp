@@ -66,6 +66,8 @@ vector<Package> get_packages(std::string search) {
     return packages;
 }
 
+#define PACKAGES_PER_PAGE 50
+
 
 class SearchComponent : public Gtk::Box {
 
@@ -84,6 +86,27 @@ class SearchComponent : public Gtk::Box {
     And only rerun Glib::signal_idle if it is 0?
     */
 
+   void handle_input_submit() {
+        auto query = this->textInput.get_text();
+        this->worker.request_stop(); 
+
+        this->worker = std::jthread([this, query](std::stop_token stopToken) {
+            auto packages = get_packages(query);
+
+            if (stopToken.stop_requested()) {
+                return; //Do nothing
+            }
+            this->mutex.lock();
+            //std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
+            this->packages = packages;
+            this->scroll.get_vadjustment()->set_value(0);
+            this->mutex.unlock();
+        });
+        this->worker.detach();
+   }
+
+
+
     SearchComponent() {
         Glib::signal_idle().connect([this]() {
             this->render();
@@ -95,26 +118,7 @@ class SearchComponent : public Gtk::Box {
         set_vexpand(true);
 
         textInput = Gtk::Entry();
-        textInput.signal_activate().connect([this]() {
-
-            auto query = this->textInput.get_text();
-            this->worker.request_stop(); 
-
-            //TODO: ENSURE ONLY LATEST QUERY CAN BE RAN
-            this->worker = std::jthread([this, query](std::stop_token stopToken) {
-                auto packages = get_packages(query);
-
-                if (stopToken.stop_requested()) {
-                    return; //Do nothing
-                }
-                this->mutex.lock();
-                //std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
-                this->packages = packages;
-                this->mutex.unlock();
-            });
-            this->worker.detach();
-
-        });
+        textInput.signal_activate().connect([this]() {this->handle_input_submit();});
         this->append(textInput);
 
         this->append(label);
