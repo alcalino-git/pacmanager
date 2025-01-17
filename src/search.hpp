@@ -1,8 +1,12 @@
 
+#pragma once
+
 #include <gtkmm.h>
 #include <string>
 #include <thread>
 #include <vector>
+#include <format>
+#include <iostream>
 #include <bits/stdc++.h>
 using namespace std;
 
@@ -32,18 +36,34 @@ void sleep(int s) {
 /// @brief Dummy implementation for testing purposes
 /// @param s string pacman -Ss will use
 /// @return a list of found packages
-vector<Package> get_packages(string s) {
+vector<Package> get_packages(std::string search) {
+    //if (search == "xo") {search = "x";} 
 
-    vector<Package> result{};
+    char command[1024];
+    sprintf(command, "pacman -Ss \"%s\"", search.c_str());
+    //std::cout << "WILL ATTEMPT TO RUN: " << command << "\n";
 
-    srand( time(0) );
+    FILE *result;
+    result = popen(command, "r");
+    
+    char buffer[1024];
+    int line_number = 0;
 
-    for (int i = 0; i < rand() % 10000; i++) {
-        result.push_back( Package(s, s) );
+    std::vector<std::string> names{};
+    std::vector<std::string> descriptions{}; 
+    while(fgets(buffer, sizeof(buffer), result)) {
+        if (line_number % 2 == 0) {names.push_back(std::string(buffer));} else {descriptions.push_back(std::string(buffer));}
+        line_number++;
     }
-    sleep(2);
 
-    return result;
+    vector<Package> packages{};
+    for (int i = 0; i < names.size(); i++) {
+        auto package = Package(names[i], descriptions[i]);
+        packages.push_back(package);
+    }
+
+    pclose(result);
+    return packages;
 }
 
 
@@ -59,26 +79,37 @@ class SearchComponent : public Gtk::Box {
     std::mutex mutex;
     std::jthread worker;
 
+    /*
+    Maybe an an std::atomic(0) int to count how many threads are currently running
+    And only rerun Glib::signal_idle if it is 0?
+    */
+
     SearchComponent() {
         Glib::signal_idle().connect([this]() {
             this->render();
             return true;
         });
 
+
         set_orientation(Gtk::Orientation::VERTICAL);
+        set_vexpand(true);
 
         textInput = Gtk::Entry();
         textInput.signal_activate().connect([this]() {
 
-            //SYNC
             auto query = this->textInput.get_text();
             this->worker.request_stop(); 
-            this->worker = std::jthread([this, query]() {
+
+            //TODO: ENSURE ONLY LATEST QUERY CAN BE RAN
+            this->worker = std::jthread([this, query](std::stop_token stopToken) {
                 auto packages = get_packages(query);
+
+                if (stopToken.stop_requested()) {
+                    return; //Do nothing
+                }
                 this->mutex.lock();
-                std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
+                //std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
                 this->packages = packages;
-                //this->render();
                 this->mutex.unlock();
             });
             this->worker.detach();
@@ -88,13 +119,15 @@ class SearchComponent : public Gtk::Box {
 
         this->append(label);
 
+        scroll.set_vexpand(true);
         this->append(scroll);
 
-        packages_components.set_orientation(Gtk::Orientation::VERTICAL);
         
     }
 
     void render() {
+        packages_components.set_orientation(Gtk::Orientation::VERTICAL);
+        packages_components.set_vexpand(true);
         label.set_text("Found " + std::to_string( packages.size() ) + " package(s)");
 
 
@@ -106,9 +139,7 @@ class SearchComponent : public Gtk::Box {
        }
 
        this->scroll.set_child(this->packages_components);
-
-
-       
+  
     }
 
 };
