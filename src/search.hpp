@@ -148,9 +148,14 @@ class SearchComponent : public Gtk::Box {
         for (int i = start; i < end; i++ ) {
             auto p = this->packages[i];
             auto label = Gtk::manage( new PackageButton(p) );
-            label->signal_clicked().connect([this, p](){
-                this->signal_changed().emit(p);
+
+            label->signal_clicked().connect([this, p, label](){
+                std::jthread([this, label](){
+                    label->package.refetch_data();
+                    this->signal_changed().emit(label->package);
+                }).detach();
             });
+
             label->set_vexpand(false);
             packages_components.append(*label);
         }

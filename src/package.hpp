@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <thread>
 #include <gtkmm.h>
 using namespace std;
 
@@ -54,7 +55,7 @@ class Package {
     /// @return a list of found packages
     static vector<Package> get_packages(std::string search) {
 
-        auto lines = get_command_line_output("pacman -Ss " + search);
+        auto lines = get_command_line_output("pacman -Ss \"" + search + "\"");
 
         std::vector<std::string> names{};
         std::vector<std::string> descriptions{}; 
@@ -80,6 +81,12 @@ class Package {
         this->description = description;
     }
 
+    void refetch_data() {
+        auto lines = get_command_line_output("pacman -Ss \"" + this->extract_name() + "\"");
+        this->name = lines[0];
+        this->description = lines[1];
+    }
+
     /// @brief Extracts the raw name from the package (no repo or [installed])
     /// @return 
     string extract_name() {
@@ -95,6 +102,7 @@ class Package {
         for (auto l: output) {
             std::cout << l << "\n";
         }
+        this->refetch_data();
     }
 
     void uninstall() {
@@ -102,6 +110,7 @@ class Package {
         for (auto l: output) {
             std::cout << l << "\n";
         }
+        this->refetch_data();
     }
 };
 
@@ -111,10 +120,9 @@ class PackageButton : public Gtk::Button {
     Gtk::Box content;
     Gtk::Label name;
 
-
+    public:
     Package package;
 
-    public:
     PackageButton(Package package) {
         this->package = package;
         this->set_hexpand(true);
@@ -128,7 +136,7 @@ class PackageButton : public Gtk::Button {
         content.set_vexpand(true);
         content.set_orientation(Gtk::Orientation::HORIZONTAL);
 
-        name.set_text(package.name);
+        name.set_text(package.extract_name());
         name.set_halign(Gtk::Align::START);
         content.append(name);
 
@@ -150,13 +158,31 @@ class PackageDisplay : public Gtk::Box {
         this->package = Package("none/no-package noversion", "NO DESCRIPTION");
 
         install.signal_clicked().connect([this](){
-            this->package.install();
-            this->render();
+            this->install.set_sensitive(false);
+            this->uninstall.set_sensitive(false);
+
+            std::jthread([this]() {
+                this->package.install();
+
+                Glib::signal_idle().connect_once([this](){
+                    this->render();
+                });
+            }).detach();
         });
 
         uninstall.signal_clicked().connect([this](){
-            this->package.uninstall();
-            this->render();
+            this->install.set_sensitive(false);
+            this->uninstall.set_sensitive(false);
+
+            std::jthread([this]() {
+                this->package.uninstall();
+
+                Glib::signal_idle().connect_once([this](){
+                    this->render();
+                });
+
+            }).detach();
+
         });
 
         this->render();
@@ -177,8 +203,10 @@ class PackageDisplay : public Gtk::Box {
 
         name.set_text(package.extract_name());
 
+        this->install.set_sensitive(true);
         install.set_label( package.is_installed() ? "Update" : "Install" );
 
+        this->uninstall.set_sensitive(true);
         uninstall.set_label( "Uninstall" );
 
 
