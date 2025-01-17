@@ -47,10 +47,7 @@ class SearchComponent : public Gtk::Box {
     std::jthread worker;
     int page;
 
-    /*
-    Maybe an an std::atomic(0) int to count how many threads are currently running
-    And only rerun Glib::signal_idle if it is 0?
-    */
+
 
    void handle_input_submit() {
         auto query = this->text_input.get_text();

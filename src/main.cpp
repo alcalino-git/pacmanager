@@ -32,5 +32,5 @@ class DefaultWindow : public Gtk::Window{
 int main(int argc, char* argv[]) {
     auto app = Gtk::Application::create("org.gtkmm.pacmanager");
 
-  return app->make_window_and_run<DefaultWindow>(argc, argv);
+	return app->make_window_and_run<DefaultWindow>(argc, argv);
 }
