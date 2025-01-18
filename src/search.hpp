@@ -41,6 +41,8 @@ class SearchComponent : public Gtk::Box {
     Gtk::Button page_down;
     Gtk::Label page_label;
     Gtk::Label range_label;
+    Gtk::Spinner spinner;
+    bool is_loading;
 
     vector<Package> packages;
     std::mutex mutex;
@@ -52,19 +54,23 @@ class SearchComponent : public Gtk::Box {
    void handle_input_submit() {
         auto query = this->text_input.get_text();
         this->worker.request_stop(); 
+        this->is_loading = true;
+        this->render();
 
         this->worker = std::jthread([this, query](std::stop_token stopToken) {
             auto packages = Package::search_packages(query);
+            std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
+
 
             if (stopToken.stop_requested()) {
                 return; //Do nothing
             }
             this->mutex.lock();
-            //std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
             this->packages = packages;
             this->page = 1;
 
             Glib::signal_idle().connect_once([this]() {
+                this->is_loading = false;
                 this->render();
             });
 
@@ -81,9 +87,12 @@ class SearchComponent : public Gtk::Box {
     }
 
     SearchComponent() {
-        this->handle_input_submit();
+        //this->handle_input_submit();
         this->page = 1;
 
+
+        spinner.start();
+        spinner.set_size_request(100,100);
 
         set_orientation(Gtk::Orientation::VERTICAL);
         set_vexpand(true);
@@ -120,7 +129,7 @@ class SearchComponent : public Gtk::Box {
         this->append(range_label);
         this->append(scroll);
 
-        
+        this->render();
     }
 
     void render() {
@@ -156,7 +165,12 @@ class SearchComponent : public Gtk::Box {
             packages_components.append(*label);
         }
 
-        this->scroll.set_child(this->packages_components);
+
+        if (!is_loading) {
+            this->scroll.set_child(this->packages_components) ;
+        } else {
+            this->scroll.set_child(spinner);
+        }
   
     }
 

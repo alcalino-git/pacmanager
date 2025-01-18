@@ -60,8 +60,7 @@ as extracted from pacman -Si [package_name]
 
 class Package {
     public:
-    string name;
-    string description;
+    unordered_map<string, string> properties;
 
     /// @brief Uses `pacman -Ss to search for packages`
     /// @param s string pacman -Ss will use
@@ -84,10 +83,10 @@ class Package {
         return packages;
     }
 
-    static unordered_map<string, string> get_package_properties(string denominator) {
+    static unordered_map<string, string> get_package_properties(string name) {
         unordered_map<string, string> result;
 
-        auto lines = get_command_line_output("pacman -Si " + split_by_char(denominator, ' ')[0]);
+        auto lines = get_command_line_output("pacman -Si " + split_by_char(name, ' ')[0]);
         string last_key = "";
         string property_value = "";
         
@@ -110,34 +109,31 @@ class Package {
     }
 
     Package() {
-        this->name = "";
-        this->description = "";
+        this->properties["Name"] = "no-package";
+        this->properties["Description"] = "no-description";
     }
 
-    Package(string name, string description) {
-        this->name = name;
-        this->description = description;
+    Package(string denominator, string description) {
+        this->properties = Package::get_package_properties( Package::extract_name(denominator) );
     }
     
     //TODO: This doesnt work. Needs to use `pacman -Si`
     void refetch_data() {
-        auto lines = get_command_line_output("pacman -Ss \"" + this->extract_name() + "\"");
-        this->name = lines[0];
-        this->description = lines[1];
+        this->properties = Package::get_package_properties( this->properties["Name"] );
     }
 
     /// @brief Extracts the raw name from the package (no repo or [installed])
     /// @return 
-    string extract_name() {
-        return  split_by_char(split_by_char(this->name, ' ')[0], '/')[1];
+    static string extract_name(string denominator) {
+        return  split_by_char(split_by_char(denominator, ' ')[0], '/')[1];
     }
 
     bool is_installed() {
-        return this->name.contains("[installed]");
+        return system(("pacman -Q " + this->properties["Name"]).c_str()) == 0;
     }
 
     void install() {
-        auto output = get_command_line_output( "pkexec pacman --noconfirm  -Syy " + this->extract_name() );
+        auto output = get_command_line_output( "pkexec pacman --noconfirm  -Syy " + this->properties["Name"] );
         for (auto l: output) {
             std::cout << l << "\n";
         }
@@ -145,7 +141,7 @@ class Package {
     }
 
     void uninstall() {
-        auto output = get_command_line_output( "pkexec pacman --noconfirm  -R " + this->extract_name() );
+        auto output = get_command_line_output( "pkexec pacman --noconfirm  -R " + this->properties["Name"] );
         for (auto l: output) {
             std::cout << l << "\n";
         }
