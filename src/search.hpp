@@ -54,7 +54,7 @@ class SearchComponent : public Gtk::Box {
         this->worker.request_stop(); 
 
         this->worker = std::jthread([this, query](std::stop_token stopToken) {
-            auto packages = Package::get_packages(query);
+            auto packages = Package::search_packages(query);
 
             if (stopToken.stop_requested()) {
                 return; //Do nothing
