@@ -87,7 +87,6 @@ class SearchComponent : public Gtk::Box {
     }
 
     SearchComponent() {
-        //this->handle_input_submit();
         this->page = 1;
 
 
@@ -129,6 +128,7 @@ class SearchComponent : public Gtk::Box {
         this->append(range_label);
         this->append(scroll);
 
+        this->handle_input_submit();
         this->render();
     }
 

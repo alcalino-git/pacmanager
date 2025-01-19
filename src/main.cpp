@@ -23,6 +23,8 @@ class DefaultWindow : public Gtk::Window{
 		this->screen_split.set_end_child(package_display);
 		this->screen_split.set_shrink_end_child(false);
 		this->screen_split.set_resize_end_child(false);
+		this->screen_split.set_shrink_start_child(false);
+		this->screen_split.set_resize_start_child(true);
 		this->screen_split.set_hexpand(true);
 
 		this->set_child(screen_split);
