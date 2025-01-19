@@ -48,7 +48,7 @@ class PackageButton : public Gtk::Button {
 
     ///Re-renders the entire button
     void update() {
-        name.set_text(package.properties["Name"]);
+        name.set_text(package.get_property("Name"));
         name.set_halign(Gtk::Align::START);
         name.set_hexpand(true);
 
@@ -113,7 +113,7 @@ class PackageDisplay : public Gtk::Box {
         this->set_vexpand(true);
         this->set_valign(Gtk::Align::CENTER);
 
-        name.set_text(package.properties["Name"]);
+        name.set_text(package.get_property("Name"));
 
         this->install.set_sensitive(true);
         install.set_label( package.is_installed() ? "Update" : "Install" );

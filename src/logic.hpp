@@ -3,10 +3,21 @@
 #include <vector>
 #include <unordered_map>
 #include <iostream>
+#include <fstream>
+#include <sqlite3.h> 
 #include <boost/algorithm/string.hpp> 
 
 using namespace std;
 using namespace boost::algorithm;
+
+#define DATABASE_LOCATION "./package_database.sqlite"
+
+
+/// Creates a database and its tables if it doesn't already exis
+/// Database is always located at `DATABASE_LOCATION`
+void prepare_database() {
+
+}
 
 vector<string> split_by_char(string s, char c) {
     vector<string> result{};
@@ -59,9 +70,11 @@ as extracted from pacman -Si [package_name]
 */
 
 class Package {
-    public:
+    
+    private:
     unordered_map<string, string> properties;
 
+    public:
     /// @brief Uses `pacman -Ss to search for packages`
     /// @param s string pacman -Ss will use
     /// @return a list of found packages
@@ -108,13 +121,21 @@ class Package {
         return result;
     }
 
+
     Package() {
         this->properties["Name"] = "no-package";
         this->properties["Description"] = "no-description";
     }
 
     Package(string denominator, string description) {
-        this->properties = Package::get_package_properties( Package::extract_name(denominator) );
+        this->properties["Name"] = Package::extract_name(denominator);
+    }
+
+    string get_property(string key) {
+        if (!this->properties.count(key)) {
+            this->refetch_data();
+        } 
+        return this->properties[key];
     }
     
     //TODO: This doesnt work. Needs to use `pacman -Si`
@@ -123,13 +144,14 @@ class Package {
     }
 
     /// @brief Extracts the raw name from the package (no repo or [installed])
+    /// @param denominator a denominator string of shape `[database]/[package-name]`
     /// @return 
     static string extract_name(string denominator) {
         return  split_by_char(split_by_char(denominator, ' ')[0], '/')[1];
     }
 
     bool is_installed() {
-        return system(("pacman -Q " + this->properties["Name"]).c_str()) == 0;
+        return system(("pacman -Q " + this->properties["Name"] + " > /dev/null 2>&1" ).c_str()) == 0;
     }
 
     void install() {
