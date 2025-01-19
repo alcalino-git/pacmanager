@@ -160,11 +160,9 @@ class SearchComponent : public Gtk::Box {
                     this->signal_changed().emit(label->package);
                 }).detach();
             });
-
             label->set_vexpand(false);
             packages_components.append(*label);
         }
-
 
         if (!is_loading) {
             this->scroll.set_child(this->packages_components) ;

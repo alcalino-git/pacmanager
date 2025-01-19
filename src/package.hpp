@@ -52,7 +52,10 @@ class PackageButton : public Gtk::Button {
         name.set_halign(Gtk::Align::START);
         name.set_hexpand(true);
 
-        icon.set_from_icon_name( this->package.is_installed() ? "emblem-default" : "system-software-install" );
+        std::jthread([this]() {
+            //TODO: The `is_installed` operation is stupidly expensive for some reason
+            icon.set_from_icon_name( /*this->package.is_installed()*/ false ? "emblem-default" : "system-software-install" );
+        }).detach();
     }
 
 
