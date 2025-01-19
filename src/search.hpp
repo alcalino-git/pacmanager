@@ -15,7 +15,31 @@ using namespace std;
 
 
 
+enum Filter {
+    EVERYTHING,
+    INSTALLED,
+    NOT_INSTALLED
+};
 
+string filterToText(Filter f) {
+    switch (f) {
+        case EVERYTHING:
+            return "Everything";
+            break;
+        case INSTALLED:
+            return "Installed";
+            break;
+        case NOT_INSTALLED:
+            return "Not installed";
+            break;
+    }
+}
+
+Filter textToFilter(string s) {
+    if (s == "Everything") {return Filter::EVERYTHING;}
+    if (s == "Installed") {return Filter::INSTALLED;}
+    if (s == "Not installed") {return Filter::NOT_INSTALLED;}
+}
 
 
 
@@ -42,8 +66,10 @@ class SearchComponent : public Gtk::Box {
     Gtk::Label page_label;
     Gtk::Label range_label;
     Gtk::Spinner spinner;
+    Gtk::DropDown filter_selector;
+    
     bool is_loading;
-
+    Filter filter_state;
     vector<Package> packages;
     std::mutex mutex;
     std::jthread worker;
@@ -58,7 +84,15 @@ class SearchComponent : public Gtk::Box {
         this->render();
 
         this->worker = std::jthread([this, query](std::stop_token stopToken) {
+
+            auto filter = [this](Package p) {
+                if (this->filter_state == Filter::EVERYTHING) {return true;}
+                if (this->filter_state == Filter::INSTALLED) {return p.is_installed();}
+                if (this->filter_state == Filter::NOT_INSTALLED) {return !p.is_installed();}
+            };
+
             auto packages = Package::search_packages(query);
+            packages = std::ranges::to<std::vector>(packages | std::views::filter(filter));
             std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
 
 
@@ -81,6 +115,7 @@ class SearchComponent : public Gtk::Box {
    }
 
 
+
     ///Returns how many pages of `PACKAGES_PER_PAGE` size can exist given the current amount of packages
     int get_num_pages() {
         return std::ceil((float)this->packages.size() / PACKAGES_PER_PAGE);
@@ -88,6 +123,7 @@ class SearchComponent : public Gtk::Box {
 
     SearchComponent() {
         this->page = 1;
+        this->filter_state = Filter::EVERYTHING;
 
 
         spinner.start();
@@ -96,7 +132,17 @@ class SearchComponent : public Gtk::Box {
         set_orientation(Gtk::Orientation::VERTICAL);
         set_vexpand(true);
 
-        top_bar.set_orientation(Gtk::Orientation::HORIZONTAL);
+        auto list_store = Gtk::StringList::create({"Everything", "Installed", "Not installed"});
+        filter_selector.set_model(list_store);
+
+        Glib::signal_idle().connect([this]() {
+            auto string_selection = GTK_STRING_OBJECT(gtk_drop_down_get_selected_item(filter_selector.gobj()));
+            if (filterToText(this->filter_state) != gtk_string_object_get_string(string_selection) ) {
+                this->filter_state = textToFilter(gtk_string_object_get_string(string_selection));
+                this->handle_input_submit();
+            }
+            return true;
+        }) ;
 
         page_down = Gtk::Button("<");
         page_up = Gtk::Button(">");
@@ -116,6 +162,8 @@ class SearchComponent : public Gtk::Box {
         text_input.set_hexpand(true);
         text_input.signal_activate().connect([this]() {this->handle_input_submit();});
 
+        top_bar.set_orientation(Gtk::Orientation::HORIZONTAL);
+        top_bar.append(filter_selector);
         top_bar.append(text_input);
         top_bar.append(page_down);
         top_bar.append(page_label);
