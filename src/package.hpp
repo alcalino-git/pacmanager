@@ -71,7 +71,7 @@ class PackageDisplay : public Gtk::Box {
     Gtk::Spinner spinner;
 
     bool initialized; //set to `false` until a valid package is set via `set_package`
-    bool installing;
+    bool installing; //set to `true` when a package install/update/delete operation is currently in progress
 
     public:
 

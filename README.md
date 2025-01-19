@@ -6,7 +6,7 @@ Pacmanager is a simple GUI wrapper for the pacman package manager intended for u
 
 ### Capabilities
 - Search for packages on the remote repos
-- Install and uninstall local packages
+- Install and update packages
 - Remove local packages
 
 ### Pending
