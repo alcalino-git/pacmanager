@@ -1,9 +1,7 @@
-
-
 # Maintainer: alcalino alanhumber333@gmail.com
 pkgname='pacmanager-git' # '-bzr', '-git', '-hg' or '-svn'
-pkgdir='pacmanager' #Name of the actual git repo used for cd 
-pkgver=r29.da5d3b6
+pkgdir='pacmanager' #Name of the actual git repo used for cd
+pkgver=r33.c47a830
 pkgrel=1
 pkgdesc="Simple GUI wrapper for the pacman package manager"
 arch=('x86_64')
@@ -19,18 +17,18 @@ sha256sums=('SKIP')
 # a description of each element in the source array.
 
 pkgver() {
-	cd "$pkgdir"
-	printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
+        cd pacmanager
+        printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 
 build() {
-	cd "$pkgdir"
-	meson setup build
-	meson compile -C build
+        cd pacmanager
+        meson setup build
+        meson compile -C build
 }
 
 package() {
-	cd "$pkgname"
-	install -Dm755 ./build/pacmanager "$pkgdir/usr/bin/pacmanager"
+        cd pacmanager
+        install -Dm755 ./build/pacmanager "$pkgdir/usr/bin/pacmanager"
 }
