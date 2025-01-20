@@ -84,11 +84,12 @@ class SearchComponent : public Gtk::Box {
         this->render();
 
         this->worker = std::jthread([this, query](std::stop_token stopToken) {
+            auto filter_state = this->filter_state;
 
-            auto filter = [this](Package p) {
-                if (this->filter_state == Filter::EVERYTHING) {return true;}
-                if (this->filter_state == Filter::INSTALLED) {return p.is_installed();}
-                if (this->filter_state == Filter::NOT_INSTALLED) {return !p.is_installed();}
+            auto filter = [filter_state](Package p) {
+                if (filter_state == Filter::EVERYTHING) {return true;}
+                if (filter_state == Filter::INSTALLED) {return p.is_installed();}
+                if (filter_state == Filter::NOT_INSTALLED) {return !p.is_installed();}
             };
 
             auto packages = Package::search_packages(query);
@@ -97,8 +98,16 @@ class SearchComponent : public Gtk::Box {
 
 
             if (stopToken.stop_requested()) {
+                std::cout << "THREAD STOPPED\n";
+                Glib::signal_idle().connect_once([this]() {
+                    this->is_loading = false;
+                    this->render();
+                });
+
                 return; //Do nothing
             }
+
+
             this->mutex.lock();
             this->packages = packages;
             this->page = 1;
@@ -133,16 +142,16 @@ class SearchComponent : public Gtk::Box {
         set_vexpand(true);
 
         auto list_store = Gtk::StringList::create({"Everything", "Installed", "Not installed"});
-        filter_selector.set_model(list_store);
+        filter_selector.set_model(list_store); // Gtk::DropDown
 
         Glib::signal_idle().connect([this]() {
             auto string_selection = GTK_STRING_OBJECT(gtk_drop_down_get_selected_item(filter_selector.gobj()));
-            if (filterToText(this->filter_state) != gtk_string_object_get_string(string_selection) ) {
+            if (this->filter_state != textToFilter(gtk_string_object_get_string(string_selection)) ) {
                 this->filter_state = textToFilter(gtk_string_object_get_string(string_selection));
                 this->handle_input_submit();
             }
             return true;
-        }) ;
+        });
 
         page_down = Gtk::Button("<");
         page_up = Gtk::Button(">");
