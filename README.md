@@ -17,8 +17,16 @@ Pacmanager is a simple GUI wrapper for the pacman package manager intended for u
 
 
 ## Instalation
+#### AUR
+```bash
+yay -S  pacmanagergui-git
+```
+#### Manual
 ```bash
 git clone https://github.com/alcalino-git/pacmanager.git
 cd pacmanager
-makepkg -si
+meson setup build
+meson compile -C build
+install -Dm755 ./build/pacmanager "/usr/bin/pacmanager"
 ```
+
