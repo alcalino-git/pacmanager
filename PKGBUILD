@@ -2,7 +2,7 @@
 
 # Maintainer: alcalino alanhumber333@gmail.com
 pkgname='pacmanager' # '-bzr', '-git', '-hg' or '-svn'
-pkgver=1.0
+pkgver=r29.da5d3b6
 pkgrel=1
 pkgdesc="Simple GUI wrapper for the pacman package manager"
 arch=('x86_64')
@@ -11,7 +11,7 @@ license=('MIT-0')
 depends=('gtk4' 'pacman' 'boost' 'glibc' 'glib2' 'meson')
 makedepends=('git') # 'bzr', 'git', 'mercurial' or 'subversion'
 install=
-source=('pacmanager::git://github.com/alcalino-git/pacmanager.git')
+source=('pacmanager::git+https://github.com/alcalino-git/pacmanager.git')
 sha256sums=('SKIP')
 
 # Please refer to the 'USING VCS SOURCES' section of the PKGBUILD man page for
@@ -25,6 +25,7 @@ pkgver() {
 
 build() {
 	cd "$pkgname"
+	meson setup build
 	meson compile -C build
 }
 

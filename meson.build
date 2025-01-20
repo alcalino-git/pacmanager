@@ -10,20 +10,12 @@ add_project_arguments('-lstdc++', language: 'cpp')
 add_project_arguments('-g', language: 'cpp')
 #add_project_arguments(' -fsanitize=thread', language: 'cpp')
 executable(
-    'main', 
+    'pacmanager', 
     './src/main.cpp', 
     dependencies: [gtkmm, thread_dep, boost_dep], 
     include_directories: include_directories('./src'),
 )
 
-executable(
-    'pacmanager', 
-    './src/main.cpp', 
-    dependencies: [gtkmm, thread_dep, boost_dep], 
-    include_directories: include_directories('./src'),
-    install: true,
-    cpp_args: ['-O2']
-)
 
 test_exe = executable(
     'test_exe',
