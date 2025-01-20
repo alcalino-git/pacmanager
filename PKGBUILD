@@ -2,6 +2,7 @@
 
 # Maintainer: alcalino alanhumber333@gmail.com
 pkgname='pacmanager-git' # '-bzr', '-git', '-hg' or '-svn'
+pkgdir='pacmanager' #Name of the actual git repo used for cd 
 pkgver=r29.da5d3b6
 pkgrel=1
 pkgdesc="Simple GUI wrapper for the pacman package manager"
@@ -18,13 +19,13 @@ sha256sums=('SKIP')
 # a description of each element in the source array.
 
 pkgver() {
-	cd "$pkgname"
+	cd "$pkgdir"
 	printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)"
 }
 
 
 build() {
-	cd "$pkgname"
+	cd "$pkgdir"
 	meson setup build
 	meson compile -C build
 }
