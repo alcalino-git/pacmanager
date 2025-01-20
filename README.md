@@ -16,3 +16,9 @@ Pacmanager is a simple GUI wrapper for the pacman package manager intended for u
 - Ability to display package installation progress in the UI
 
 
+## Instalation
+```bash
+git clone https://github.com/alcalino-git/pacmanager.git
+cd pacmanager
+makepkg -si
+```
