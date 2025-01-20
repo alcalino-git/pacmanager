@@ -1,7 +1,7 @@
 
 
 # Maintainer: alcalino alanhumber333@gmail.com
-pkgname='pacmanager' # '-bzr', '-git', '-hg' or '-svn'
+pkgname='pacmanager-git' # '-bzr', '-git', '-hg' or '-svn'
 pkgver=r29.da5d3b6
 pkgrel=1
 pkgdesc="Simple GUI wrapper for the pacman package manager"
