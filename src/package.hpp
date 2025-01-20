@@ -68,6 +68,7 @@ class PackageDisplay : public Gtk::Box {
     Gtk::Box controls_box;
     Gtk::Button install; //Doubles as update button since installing an already installed package updates it
     Gtk::Button uninstall;
+    Gtk::Button system_update;
     Gtk::Spinner spinner;
 
     bool initialized; //set to `false` until a valid package is set via `set_package`
@@ -94,6 +95,11 @@ class PackageDisplay : public Gtk::Box {
         this->set_margin(50);
         this->set_size_request(500);
 
+        this->set_orientation(Gtk::Orientation::VERTICAL);
+        this->set_hexpand(true);
+        this->set_vexpand(true);
+        this->set_valign(Gtk::Align::CENTER);
+
         install.set_margin(10);
         install.signal_clicked().connect([this](){
             // this->install.set_sensitive(false);
@@ -111,6 +117,7 @@ class PackageDisplay : public Gtk::Box {
         });
 
         uninstall.set_margin(10);
+        uninstall.set_tooltip_text("Removes package from the system");
         uninstall.signal_clicked().connect([this](){
             // this->install.set_sensitive(false);
             // this->uninstall.set_sensitive(false);
@@ -128,8 +135,16 @@ class PackageDisplay : public Gtk::Box {
 
         });
 
+        system_update.set_label("full update");
+        system_update.set_tooltip_text("Updates every package in the system all at the same time");
+        system_update.set_margin(10);
+
+
         controls_box.append(install);
         controls_box.append(uninstall);
+        controls_box.append(system_update);
+        controls_box.set_orientation(Gtk::Orientation::HORIZONTAL);
+        controls_box.set_halign(Gtk::Align::CENTER);
 
         name.set_margin(10);
         description.set_margin(10);
@@ -138,6 +153,23 @@ class PackageDisplay : public Gtk::Box {
         
         spinner.start();
         spinner.set_visible(false);
+
+
+        system_update.signal_clicked().connect([this](){
+        
+            this->installing = true;
+            this->render();
+
+            std::jthread([this]() {
+                Package::system_update();
+                this->installing = false;
+                Glib::signal_idle().connect_once([this](){
+                    this->render();
+                });
+
+            }).detach();
+
+        });
 
         append(name);
         append(description);
@@ -149,7 +181,7 @@ class PackageDisplay : public Gtk::Box {
 
     void set_package(Package package) {
         this->package = package;
-        this->installing = false;
+        //this->installing = false;
         this->initialized = true;
         this->render();
     } 
@@ -157,25 +189,26 @@ class PackageDisplay : public Gtk::Box {
     void render() {
         //for (auto c: this->get_children()) {this->remove(*c);}
 
-        this->set_orientation(Gtk::Orientation::VERTICAL);
-        this->set_hexpand(true);
-        this->set_vexpand(true);
-        this->set_valign(Gtk::Align::CENTER);
 
         name.set_text(package.get_property("Name"));
         description.set_text(this->get_package_data());
 
         this->install.set_sensitive(!installing && initialized);
         install.set_label( package.is_installed() ? "Update" : "Install" );
+        install.set_tooltip_text( 
+            package.is_installed() 
+            ? "Installs updates for this package if any are avalible" 
+            : "Installs this package in the system"
+        );
 
-        this->uninstall.set_sensitive(!installing && initialized);
+        this->uninstall.set_sensitive(!installing && initialized && this->package.is_installed());
         uninstall.set_label( "Uninstall" );
+
+        system_update.set_sensitive(!installing);
 
         spinner.set_visible(installing);
 
 
-        controls_box.set_orientation(Gtk::Orientation::HORIZONTAL);
-        controls_box.set_halign(Gtk::Align::CENTER);
 
     }
 

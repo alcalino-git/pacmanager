@@ -131,6 +131,10 @@ class Package {
         return result;
     }
 
+    void static system_update() {
+        system("pkexec pacman -Syu --noconfirm");
+    }
+
 
     Package() {
         this->properties["Name"] = "no-package";
