@@ -70,6 +70,7 @@ class PackageDisplay : public Gtk::Box {
     Gtk::Button uninstall;
     Gtk::Button system_update;
     Gtk::Spinner spinner;
+    Gtk::MessageDialog* dialog;
 
     bool initialized; //set to `false` until a valid package is set via `set_package`
     bool installing; //set to `true` when a package install/update/delete operation is currently in progress
@@ -88,6 +89,32 @@ class PackageDisplay : public Gtk::Box {
         ;
     }
 
+    void package_operation(bool install) {
+        this->installing = true;
+        this->render();
+
+        std::jthread([this, install]() {
+            auto result = install ? this->package.install() : this->package.uninstall();
+            if (result != 0) {this->error_dialog(install ? "installed/updated" : "removed", result);}
+            this->installing = false;
+            Glib::signal_idle().connect_once([this](){
+                this->render();
+            });
+        }).detach();
+    }
+
+    void error_dialog(string s, int err_code) {
+        Glib::signal_idle().connect_once([this,s, err_code](){
+            this->dialog = new Gtk::MessageDialog("Package could not be " + s + "\nError code: " + std::to_string(err_code));
+            this->dialog->set_title("An error has ocurred");
+            this->dialog->set_size_request(500);
+            this->dialog->signal_response().connect([this](auto r){
+                this->dialog->set_visible(false);
+            });
+            this->dialog->set_visible(true);
+        });
+    }
+
     PackageDisplay() {
         this->initialized = false;
         this->installing = false;
@@ -102,37 +129,13 @@ class PackageDisplay : public Gtk::Box {
 
         install.set_margin(10);
         install.signal_clicked().connect([this](){
-            // this->install.set_sensitive(false);
-            // this->uninstall.set_sensitive(false);
-            this->installing = true;
-            this->render();
-
-            std::jthread([this]() {
-                this->package.install();
-                this->installing = false;
-                Glib::signal_idle().connect_once([this](){
-                    this->render();
-                });
-            }).detach();
+            this->package_operation(true);
         });
 
         uninstall.set_margin(10);
         uninstall.set_tooltip_text("Removes package from the system");
         uninstall.signal_clicked().connect([this](){
-            // this->install.set_sensitive(false);
-            // this->uninstall.set_sensitive(false);
-            this->installing = true;
-            this->render();
-
-            std::jthread([this]() {
-                this->package.uninstall();
-                this->installing = false;
-                Glib::signal_idle().connect_once([this](){
-                    this->render();
-                });
-
-            }).detach();
-
+            this->package_operation(false);
         });
 
         system_update.set_label("full update");

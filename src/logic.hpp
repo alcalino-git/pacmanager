@@ -168,19 +168,15 @@ class Package {
         return system(("pacman -Q " + this->properties["Name"] + " > /dev/null 2>&1" ).c_str()) == 0;
     }
 
-    void install() {
-        auto output = get_command_line_output( "pkexec pacman --noconfirm  -Syy " + this->properties["Name"] );
-        for (auto l: output) {
-            std::cout << l << "\n";
-        }
+    int install() {
+        auto output = system( ("pkexec pacman --noconfirm  -Syy " + this->properties["Name"] ).c_str());
         this->refetch_data();
+        return output;
     }
 
-    void uninstall() {
-        auto output = get_command_line_output( "pkexec pacman --noconfirm  -R " + this->properties["Name"] );
-        for (auto l: output) {
-            std::cout << l << "\n";
-        }
+    int uninstall() {
+        auto output = system( ("pkexec pacman --noconfirm  -R " + this->properties["Name"]).c_str() );
         this->refetch_data();
+        return output;
     }
 };
