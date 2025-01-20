@@ -15,11 +15,7 @@ using namespace std;
 
 
 
-enum Filter {
-    EVERYTHING,
-    INSTALLED,
-    NOT_INSTALLED
-};
+
 
 string filterToText(Filter f) {
     switch (f) {
@@ -86,14 +82,8 @@ class SearchComponent : public Gtk::Box {
         this->worker = std::jthread([this, query](std::stop_token stopToken) {
             auto filter_state = this->filter_state;
 
-            auto filter = [filter_state](Package p) {
-                if (filter_state == Filter::EVERYTHING) {return true;}
-                if (filter_state == Filter::INSTALLED) {return p.is_installed();}
-                if (filter_state == Filter::NOT_INSTALLED) {return !p.is_installed();}
-            };
 
-            auto packages = Package::search_packages(query);
-            packages = std::ranges::to<std::vector>(packages | std::views::filter(filter));
+            auto packages = Package::search_packages(query, filter_state);
             std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
 
 

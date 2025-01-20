@@ -90,7 +90,7 @@ class PackageDisplay : public Gtk::Box {
     PackageDisplay() {
         this->initialized = false;
         this->installing = false;
-        this->package = Package("none/no-package noversion", "NO DESCRIPTION");
+        this->package = Package("none/no-package noversion");
         this->set_margin(50);
         this->set_size_request(500);
 

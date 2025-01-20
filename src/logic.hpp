@@ -69,6 +69,12 @@ Create a function `get_package_data` that takes in a package name and returns a 
 as extracted from pacman -Si [package_name]
 */
 
+enum Filter {
+    EVERYTHING,
+    INSTALLED,
+    NOT_INSTALLED
+};
+
 class Package {
     
     private:
@@ -78,20 +84,24 @@ class Package {
     /// @brief Uses `pacman -Ss to search for packages`
     /// @param s string pacman -Ss will use
     /// @return a list of found packages
-    static vector<Package> search_packages(std::string search) {
+    static vector<Package> search_packages(std::string search, Filter f) {
 
-        auto lines = get_command_line_output("pacman -Ss \"" + search + "\"");
+        string command;
+        command = "pacman -Ss \"" + search + "\"";
 
-        std::vector<std::string> names{};
-        std::vector<std::string> descriptions{}; 
-        for (int i = 0; i < lines.size(); i++) {
-            if (i % 2 == 0) {names.push_back(lines[i]);} else {descriptions.push_back(lines[i]);}
-        }
+        std::cout << "SEARCHING WITH COMMAND: " << command << "\n";
+
+        auto lines = get_command_line_output(command);
+
+        std::cout << "GOT " << lines.size() << " packages\n";
 
         vector<Package> packages{};
-        for (int i = 0; i < names.size(); i++) {
-            auto package = Package(names[i], descriptions[i]);
-            packages.push_back(package);
+        for (int i = 0; i < lines.size(); i++) {
+            if (i % 2 != 0) {continue;}
+            if (f == Filter::EVERYTHING || (lines[i].contains("installed") == (f == Filter::INSTALLED) )) {
+                auto package = Package(lines[i]);
+                packages.push_back(package);
+            }
         }
         return packages;
     }
@@ -127,7 +137,7 @@ class Package {
         this->properties["Description"] = "no-description";
     }
 
-    Package(string denominator, string description) {
+    Package(string denominator) {
         this->properties["Name"] = Package::extract_name(denominator);
     }
 

@@ -26,7 +26,7 @@ int main() {
         return 1;
     }
 
-    auto packages = Package::search_packages("pacman");
+    auto packages = Package::search_packages("pacman", Filter::EVERYTHING);
     std::cout << "Recieved " << packages.size() << " packages\n";
     if (packages.size() < 10) {
         return 1;
