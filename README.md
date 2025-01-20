@@ -6,10 +6,14 @@ Pacmanager is a simple GUI wrapper for the pacman package manager intended for u
 
 ### Capabilities
 - Search for packages on the remote repos
+- Filter packages by status
+- View info about packages
 - Install and update packages
+- Perform full system updates
 - Remove local packages
 
 ### Pending
-- Filter packages by status
-- View info about packages
-- Update everything at once
+- Ability to report errors to the user. If a package fails to install, the application fails silently
+- Ability to display package installation progress in the UI
+
+
