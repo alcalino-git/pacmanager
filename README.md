@@ -13,7 +13,6 @@ Pacmanager is a simple GUI wrapper for the pacman package manager intended for u
 - Remove local packages
 
 ### Pending
-- Ability to report errors to the user. If a package fails to install, the application fails silently
 - Ability to display package installation progress in the UI
 
 
