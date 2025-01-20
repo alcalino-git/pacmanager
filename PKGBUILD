@@ -1,5 +1,5 @@
 # Maintainer: alcalino alanhumber333@gmail.com
-pkgname='pacmanager-git' # '-bzr', '-git', '-hg' or '-svn'
+pkgname='pacmanagergui-git' # '-bzr', '-git', '-hg' or '-svn'
 pkgdir='pacmanager' #Name of the actual git repo used for cd
 pkgver=r33.c47a830
 pkgrel=1
