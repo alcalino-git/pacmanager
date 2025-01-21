@@ -18,6 +18,7 @@ jobs:
 
             - name: Prepare system for git usage
               run: |
+                mkdir -p ~/.ssh
                 echo "Host aur.archlinux.org
                 IdentityFile ~/.ssh/aur
                 User aur" >> ~/.ssh/config
