@@ -1,0 +1,65 @@
+name: AUR-continuous-delivery
+
+
+on: 
+  workflow_dispatch
+
+jobs:
+    deliver:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v2
+
+            - name: Get new version
+              run: |
+                printf "r%s.%s" "$(git rev-list --count HEAD)" "$(git rev-parse --short HEAD)" >> ~/ver.txt
+
+            - name: Prepare system for git usage
+              run: |
+                echo "Host aur.archlinux.org
+                IdentityFile ~/.ssh/aur
+                User aur" >> ~/.ssh/config
+
+                echo -e "${{ secrets.AUR_SSH_KEY }}" > ~/.ssh/aur
+
+                chmod 400 ~/.ssh/aur
+
+                git config --global user.email "alanhumber333@gmail.com"
+                git config --global user.name "alcalino-git"
+          
+            - name: Get Last Commit Message
+              run: |
+                git log -1 --pretty=%B > ~/commit.txt
+
+            - name: Update to AUR
+              run: |
+                cd ~
+                ls
+
+                git clone -c core.sshCommand="ssh -o StrictHostKeyChecking=no" ssh://aur@aur.archlinux.org/pacmanagergui-git.git
+                cd pacmanagergui-git
+
+                #cat PKGBUILD       
+                sed "s/pkgver=.*/pkgver=$(cat ~/ver.txt)/" PKGBUILD >> PKGBUILD.tmp && mv PKGBUILD.tmp PKGBUILD
+                sed "s/.*pkgver =.*/       pkgver = $(cat ~/ver.txt)/" .SRCINFO >> .SRCINFO.tmp && mv .SRCINFO.tmp .SRCINFO
+
+                echo "UPDATED FILES AS FOLLOWS"
+                echo "======.SRCINFO======"
+                cat .SRCINFO
+                echo "======PKGBUILD======"
+                cat PKGBUILD
+
+                git add .
+                git commit -m "AUTOMATED SYNC JOB: $(cat ~/commit.txt)"
+                git push
+
+
+
+
+
+
+
+
+

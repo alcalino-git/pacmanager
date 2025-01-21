@@ -3,3 +3,4 @@ build
 .rmv
 .SRCINFO
 PKGBUILD
+.github/workflows/.secrets
