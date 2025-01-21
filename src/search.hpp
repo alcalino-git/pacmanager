@@ -214,7 +214,11 @@ class SearchComponent : public Gtk::Box {
         if (!is_loading) {
             this->scroll.set_child(this->packages_components) ;
         } else {
-            this->scroll.set_child(spinner);
+            auto spinner_box = Gtk::make_managed<Gtk::Box>(Gtk::Orientation::VERTICAL);
+            spinner_box->set_halign(Gtk::Align::CENTER);  // Horizontal centering
+            spinner_box->set_valign(Gtk::Align::CENTER);  // Vertical centering
+            spinner_box->append(spinner);
+            this->scroll.set_child(*spinner_box);
         }
   
     }
