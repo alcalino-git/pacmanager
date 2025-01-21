@@ -11,6 +11,8 @@ jobs:
         steps:
             - name: Checkout code
               uses: actions/checkout@v2
+              with:
+                fetch-depth: 0
 
             - name: Get new version
               run: |
@@ -18,6 +20,7 @@ jobs:
 
             - name: Prepare system for git usage
               run: |
+                mkdir -p ~/.ssh
                 echo "Host aur.archlinux.org
                 IdentityFile ~/.ssh/aur
                 User aur" >> ~/.ssh/config
