@@ -11,8 +11,6 @@ Pacmanager is a simple GUI wrapper for the pacman package manager intended for u
 - Install and update packages
 - Perform full system updates
 - Remove local packages
-
-### Pending
 - Ability to display package installation progress in the UI
 
 
