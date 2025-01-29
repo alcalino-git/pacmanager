@@ -61,10 +61,18 @@ class PackageButton : public Gtk::Button {
 
 };
 
+
+enum PackageOperations {
+    INSTALL,
+    UNINSTALL,
+    SYS_UPDATE
+};
+
 class PackageDisplay : public Gtk::Box {
     Package package;
     Gtk::Label name;
     Gtk::Label description;
+    Gtk::Label status;
     Gtk::Box controls_box;
     Gtk::Button install; //Doubles as update button since installing an already installed package updates it
     Gtk::Button uninstall;
@@ -89,23 +97,47 @@ class PackageDisplay : public Gtk::Box {
         ;
     }
 
-    void package_operation(bool install) {
+    void package_operation(PackageOperations operation) {
         this->installing = true;
         this->render();
 
-        std::jthread([this, install]() {
-            auto result = install ? this->package.install() : this->package.uninstall();
-            if (result != 0) {this->error_dialog(install ? "installed/updated" : "removed", result);}
+        std::jthread([this, operation]() {
+            string command;
+
+            if (operation == PackageOperations::INSTALL) {command = ("pkexec pacman --noconfirm  -Syy " + this->package.get_property("Name") );} 
+            if (operation == PackageOperations::UNINSTALL) {command = ("pkexec pacman --noconfirm  -R " + this->package.get_property("Name")); } 
+            if (operation == PackageOperations::SYS_UPDATE) {command = ("pkexec pacman --noconfirm  -Syu "); } 
+
+            std::cout << "WILL RUN: " << command << "\n";
+            auto command_out = popen(command.c_str(), "r");
+
+            char buffer[128];
+            while (fgets(buffer, sizeof(buffer), command_out) !=  NULL) {
+                std::cout << buffer << "\n"; //TODO: DRAW THIS TO THE INTERFACE
+                this->status.set_text(buffer);
+                Glib::signal_idle().connect_once([this](){
+                    this->render();
+                });
+            }
+
             this->installing = false;
+            auto status = pclose(command_out);
+            if (status != 0 ) {
+                string action_string;
+                if (operation == PackageOperations::INSTALL) {action_string = "Failed to install/update"; } 
+                if (operation == PackageOperations::UNINSTALL) {action_string = "Failed to uninstall"; } 
+                if (operation == PackageOperations::SYS_UPDATE) {action_string = "Failed to perform system update";} 
+                this->error_dialog(action_string, status);
+            }
             Glib::signal_idle().connect_once([this](){
                 this->render();
             });
         }).detach();
     }
 
-    void error_dialog(string s, int err_code) {
-        Glib::signal_idle().connect_once([this,s, err_code](){
-            this->dialog = new Gtk::MessageDialog("Package could not be " + s + "\nError code: " + std::to_string(err_code));
+    void error_dialog(string message, int err_code) {
+        Glib::signal_idle().connect_once([this,message, err_code](){
+            this->dialog = new Gtk::MessageDialog(message + "\nError code: " + std::to_string(err_code));
             this->dialog->set_title("An error has ocurred");
             this->dialog->set_size_request(500);
             this->dialog->signal_response().connect([this](auto r){
@@ -129,13 +161,13 @@ class PackageDisplay : public Gtk::Box {
 
         install.set_margin(10);
         install.signal_clicked().connect([this](){
-            this->package_operation(true);
+            this->package_operation(PackageOperations::INSTALL);
         });
 
         uninstall.set_margin(10);
         uninstall.set_tooltip_text("Removes package from the system");
         uninstall.signal_clicked().connect([this](){
-            this->package_operation(false);
+            this->package_operation(PackageOperations::UNINSTALL);
         });
 
         system_update.set_label("full update");
@@ -159,25 +191,14 @@ class PackageDisplay : public Gtk::Box {
 
 
         system_update.signal_clicked().connect([this](){
-        
-            this->installing = true;
-            this->render();
-
-            std::jthread([this]() {
-                Package::system_update();
-                this->installing = false;
-                Glib::signal_idle().connect_once([this](){
-                    this->render();
-                });
-
-            }).detach();
-
+            this->package_operation(PackageOperations::SYS_UPDATE);
         });
 
         append(name);
         append(description);
         append(controls_box);
         append(spinner);
+        append(status);
 
         this->render();
     }
@@ -210,6 +231,8 @@ class PackageDisplay : public Gtk::Box {
         system_update.set_sensitive(!installing);
 
         spinner.set_visible(installing);
+
+        if (!installing) {this->status.set_text("No operation is currently happening");}
 
 
 
