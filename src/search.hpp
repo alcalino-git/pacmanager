@@ -95,9 +95,11 @@ class SearchComponent : public Gtk::Box {
     Gtk::Spinner spinner;
     Gtk::DropDown filter_selector;
     Gtk::DropDown sorter_selector;
+    Gtk::Button order_button;
     
     PackageDatabase database;
     bool is_loading;
+    bool inverse_order;
     Filter filter_state;
     Sorter sorter_state;
     vector<Package*> packages;
@@ -119,6 +121,7 @@ class SearchComponent : public Gtk::Box {
 
 
             auto packages = this->database.query_database(query, filter_state, sorter_state);
+            if (this->inverse_order) {std::reverse(packages.begin(), packages.end());}
             std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
 
 
@@ -159,6 +162,7 @@ class SearchComponent : public Gtk::Box {
         this->page = 1;
         this->filter_state = Filter::EVERYTHING;
         this->sorter_state = Sorter::NONE;
+        this->inverse_order = false;
         //this->database = PackageDatabase();
 
         this->set_margin(10);
@@ -193,6 +197,11 @@ class SearchComponent : public Gtk::Box {
             return true;
         });
 
+        order_button.signal_clicked().connect([this]() {
+            this->inverse_order = !this->inverse_order;
+            this->handle_input_submit();
+        });
+
         page_down = Gtk::Button("<");
         page_up = Gtk::Button(">");
 
@@ -219,6 +228,7 @@ class SearchComponent : public Gtk::Box {
 
         search_options.append(filter_selector);
         search_options.append(sorter_selector);
+        search_options.append(order_button);
 
         scroll.set_vexpand(true);
 
@@ -235,6 +245,7 @@ class SearchComponent : public Gtk::Box {
     void render() {
         
         page_label.set_text(std::to_string(page) + "/" + std::to_string( this->get_num_pages() ));
+        order_button.set_label(inverse_order ? "Ascending" : "Descending");
 
         this->scroll.get_vadjustment()->set_value(0);
 

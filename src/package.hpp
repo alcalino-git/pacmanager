@@ -98,6 +98,7 @@ class PackageDisplay : public Gtk::Box {
     }
 
     void package_operation(PackageOperations operation) {
+        //TODO: UPDATE PACKAGE DATABASE ONCE THIS IS DONE RUNNING
         this->installing = true;
         this->render();
 
