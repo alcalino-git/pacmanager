@@ -1,22 +1,41 @@
 
+#pragma once
+
 #include <string>
+#include <thread>
 #include <vector>
 #include <unordered_map>
 #include <iostream>
 #include <fstream>
+#include <sstream>
+#include <iomanip>
+#include <ctime>
+#include <cmath>
+
 #include <sqlite3.h> 
 #include <boost/algorithm/string.hpp> 
+
+
 
 using namespace std;
 using namespace boost::algorithm;
 
-#define DATABASE_LOCATION "./package_database.sqlite"
+time_t string_to_date(string date_str) {
+    std::tm tm = {};
+    std::istringstream ss(date_str);
 
+    // Parsing format: "%a %d %b %Y %I:%M:%S %p %Z"
+    ss >> std::get_time(&tm, "%a %d %b %Y %I:%M:%S %p");
 
-/// Creates a database and its tables if it doesn't already exis
-/// Database is always located at `DATABASE_LOCATION`
-void prepare_database() {
+    if (ss.fail()) {
+        std::cerr << "Failed to parse date string!" << std::endl;
+        return 1;
+    }
 
+    // Convert to time_t (seconds since epoch)
+    time_t time_obj = std::mktime(&tm);
+
+    return time_obj;
 }
 
 vector<string> split_by_char(string s, char c) {
@@ -32,7 +51,7 @@ vector<string> split_by_char(string s, char c) {
             buffer += s[i];
         }
     }
-    if (buffer.length() != 0) {result.push_back(buffer);}
+    if (buffer.length() != 0 || result.size() == 0) {result.push_back(buffer);}
 
     return result;
 }
@@ -75,6 +94,12 @@ enum Filter {
     NOT_INSTALLED
 };
 
+enum Sorter {
+    INSTALLED_SIZE,
+    INSTALLED_DATE,
+    NONE
+};
+
 class Package {
     
     private:
@@ -84,7 +109,7 @@ class Package {
     /// @brief Uses `pacman -Ss to search for packages`
     /// @param s string pacman -Ss will use
     /// @return a list of found packages
-    static vector<Package> search_packages(std::string search, Filter f) {
+    static vector<Package> search_packages(std::string search, Filter f, Sorter sort) {
 
         string command;
         command = "pacman -Ss \"" + search + "\"";
@@ -103,13 +128,66 @@ class Package {
                 packages.push_back(package);
             }
         }
+
+        if (sort == Sorter::NONE) {return packages;}
+
+        //Preemptively fetch the required properties in parallaler for better performance
+        vector<jthread> threads;
+        int batch_size = std::ceil((float)packages.size() / (float)std::thread::hardware_concurrency()) ;
+        for (int i = 0; i < std::thread::hardware_concurrency(); i++) {
+            threads.emplace_back([&packages, i, batch_size]() {
+
+                int start = batch_size * i;
+                int end = (batch_size) * (i+1);
+                std::cout << start <<  "..." << end << "\n";
+                for (int k = start; k < end; k++) {
+                    if (k >= packages.size()) {break;}
+                    packages[k].get_property("Installed Size");
+                    packages[k].get_property("Install Date");
+                }
+            });
+
+        }
+
+        if (sort == Sorter::INSTALLED_SIZE) {
+            std::sort(packages.begin(), packages.end(), [](auto a, auto b) {
+                string a_size = a.get_property("Installed Size");;
+                string b_size = b.get_property("Installed Size");;
+
+                float a_float = std::stof(a_size);
+                float b_float = std::stof(b_size);
+                if (split_by_char(a_size, ' ')[1] == "MiB") {a_float *= 1024;}
+                if (split_by_char(b_size, ' ')[1] == "MiB") {b_float *= 1024;}
+                
+                return a_float > b_float;
+            });
+        }
+
+        if (sort == Sorter::INSTALLED_DATE) {
+            std::sort(packages.begin(), packages.end(), [](auto a, auto b) {
+                string a_date_str = a.get_property("Install Date");
+                string b_date_str = b.get_property("Install Date");
+
+                if (a_date_str == "") {return false;}
+                if (b_date_str == "") {return true;} 
+                
+                return string_to_date(a_date_str) > string_to_date(b_date_str);
+            });
+        }
+
         return packages;
     }
 
     static unordered_map<string, string> get_package_properties(string name) {
         unordered_map<string, string> result;
 
-        auto lines = get_command_line_output("pacman -Si " + split_by_char(name, ' ')[0]);
+        bool is_installed = system(("pacman -Q " + split_by_char(name, ' ')[0] + " > /dev/null 2>&1" ).c_str()) == 0;
+
+        string command;
+        if (is_installed) {command = "pacman -Qi " + split_by_char(name, ' ')[0];}
+        if (!is_installed) {command = "pacman -Si " + split_by_char(name, ' ')[0];}
+
+        auto lines = get_command_line_output(command);
         string last_key = "";
         string property_value = "";
         
@@ -145,14 +223,27 @@ class Package {
         this->properties["Name"] = Package::extract_name(denominator);
     }
 
+    void set_property(string key, string value) {
+        this->properties[key] = value;
+    }
+
+
+    /**
+     * Gets a property of the package
+     * @param key The property to fetch
+     * @returns A string with the selected property, or "" if it doesn't exist 
+     */
     string get_property(string key) {
-        if (!this->properties.count(key)) {
-            this->refetch_data();
-        } 
+        // if (!this->properties.count(key)) {
+        //     this->refetch_data();
+        // }
+        // if (!this->properties.count(key)) {
+        //     this->properties[key] = "";
+        // } 
         return this->properties[key];
     }
     
-    //TODO: This doesnt work. Needs to use `pacman -Si`
+
     void refetch_data() {
         this->properties = Package::get_package_properties( this->properties["Name"] );
     }
@@ -168,12 +259,18 @@ class Package {
         return system(("pacman -Q " + this->properties["Name"] + " > /dev/null 2>&1" ).c_str()) == 0;
     }
 
+    /**
+     * @deprecated Prefer using `package_operation` on the UI component directly
+     */
     int install() {
         auto output = system( ("pkexec pacman --noconfirm  -Syy " + this->properties["Name"] ).c_str());
         this->refetch_data();
         return output;
     }
 
+    /**
+     * @deprecated Prefer using `package_operation` on the UI component directly
+     */
     int uninstall() {
         auto output = system( ("pkexec pacman --noconfirm  -R " + this->properties["Name"]).c_str() );
         this->refetch_data();

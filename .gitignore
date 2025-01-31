@@ -4,3 +4,4 @@ build
 .SRCINFO
 PKGBUILD
 .github/workflows/.secrets
+*.txt

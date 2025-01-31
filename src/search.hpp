@@ -66,6 +66,7 @@ class SearchComponent : public Gtk::Box {
     
     bool is_loading;
     Filter filter_state;
+    Sorter sort_state;
     vector<Package> packages;
     std::mutex mutex;
     std::jthread worker;
@@ -83,7 +84,7 @@ class SearchComponent : public Gtk::Box {
             auto filter_state = this->filter_state;
 
 
-            auto packages = Package::search_packages(query, filter_state);
+            auto packages = Package::search_packages(query, filter_state, sort_state);
             std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
 
 
@@ -123,6 +124,7 @@ class SearchComponent : public Gtk::Box {
     SearchComponent() {
         this->page = 1;
         this->filter_state = Filter::EVERYTHING;
+        this->sort_state = Sorter::NONE;
 
 
         spinner.start();

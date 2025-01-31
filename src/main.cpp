@@ -2,6 +2,7 @@
 #include <gtkmm.h>
 #include "./search.hpp"
 #include "package.hpp"
+#include "database.hpp"
 
 
 class DefaultWindow : public Gtk::Window{
