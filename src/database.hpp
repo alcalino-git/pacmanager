@@ -70,6 +70,16 @@ class PackageDatabase {
         }
     }
 
+    void update_package_state(Package p) {
+        this->packages[p.get_property("Name")].refetch_data();
+        bool installed = p.is_installed();
+        if (installed) {
+            this->installed_packages.insert(p.get_property("Name"));
+        } else {
+            this->installed_packages.erase(p.get_property("Name"));
+        }
+    }
+
     static void sort_by_installed_size(vector<Package*>* packages) {
         std::sort(packages->begin(), packages->end(), [](Package* a, Package* b){
             auto a_size = std::stof(a->get_property("Installed Size"));

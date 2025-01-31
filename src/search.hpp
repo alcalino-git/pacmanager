@@ -97,7 +97,7 @@ class SearchComponent : public Gtk::Box {
     Gtk::DropDown sorter_selector;
     Gtk::Button order_button;
     
-    PackageDatabase database;
+    PackageDatabase* database;
     bool is_loading;
     bool inverse_order;
     Filter filter_state;
@@ -107,9 +107,13 @@ class SearchComponent : public Gtk::Box {
     std::jthread worker;
     int page;
 
-
+    void connect_database(PackageDatabase* database) {
+        this->database = database;
+        this->handle_input_submit();
+    }
 
    void handle_input_submit() {
+        if (this->database == NULL) {return;} //Database is not ready yet 
         auto query = this->text_input.get_text();
         this->worker.request_stop(); 
         this->is_loading = true;
@@ -120,13 +124,13 @@ class SearchComponent : public Gtk::Box {
             auto sorter_state = this->sorter_state;
 
 
-            auto packages = this->database.query_database(query, filter_state, sorter_state);
+            auto packages = this->database->query_database(query, filter_state, sorter_state);
             if (this->inverse_order) {std::reverse(packages.begin(), packages.end());}
-            std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
+            //std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
 
 
             if (stopToken.stop_requested()) {
-                std::cout << "THREAD STOPPED\n";
+                //std::cout << "THREAD STOPPED\n";
                 Glib::signal_idle().connect_once([this]() {
                     this->is_loading = false;
                     this->render();
@@ -238,7 +242,7 @@ class SearchComponent : public Gtk::Box {
         this->append(range_label);
         this->append(scroll);
 
-        this->handle_input_submit();
+        //this->handle_input_submit();
         this->render();
     }
 

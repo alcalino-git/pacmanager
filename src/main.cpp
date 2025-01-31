@@ -9,14 +9,22 @@ class DefaultWindow : public Gtk::Window{
 	Gtk::Paned screen_split;
 	PackageDisplay package_display;
 	SearchComponent search_component;
+	PackageDatabase* database;
 
 	public:
 	DefaultWindow() {
 		set_title("Pacmanager");
 		set_size_request(1200, 800);
 
+		this->database = new PackageDatabase();
+		this->search_component.connect_database(this->database);
 		this->search_component.signal_changed().connect([this](auto p) {
 			this->package_display.set_package(p);
+		});
+
+		this->package_display.signal_update().connect([this](Package p) {
+			std::cout << "Updates package " << p.get_property("Name") << "\n";
+			this->database->update_package_state(p);
 		});
 
 		//Use a Gtk::Paned to render both the search component and PackageDisplay component 

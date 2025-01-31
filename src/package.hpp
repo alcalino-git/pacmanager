@@ -69,6 +69,8 @@ enum PackageOperations {
 };
 
 class PackageDisplay : public Gtk::Box {
+    using type_signal_package_update = sigc::signal<void(Package)>;
+
     Package package;
     Gtk::Label name;
     Gtk::Label description;
@@ -84,6 +86,11 @@ class PackageDisplay : public Gtk::Box {
     bool installing; //set to `true` when a package install/update/delete operation is currently in progress
 
     public:
+
+    type_signal_package_update m_signal_update;
+    type_signal_package_update signal_update() {
+        return m_signal_update;
+    };
 
     string get_package_data() {
         return initialized 
@@ -130,8 +137,9 @@ class PackageDisplay : public Gtk::Box {
                 if (operation == PackageOperations::SYS_UPDATE) {action_string = "Failed to perform system update";} 
                 this->error_dialog(action_string, status);
             }
+            this->package.refetch_data();
             Glib::signal_idle().connect_once([this](){
-                this->package.refetch_data();
+                this->signal_update().emit(this->package);
                 this->render();
             });
         }).detach();
