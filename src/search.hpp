@@ -223,6 +223,7 @@ class SearchComponent : public Gtk::Box {
         text_input = Gtk::SearchEntry();
         text_input.set_hexpand(true);
         text_input.signal_changed().connect([this]() {this->handle_input_submit();});
+        text_input.signal_activate().connect([this]() {this->handle_input_submit();});
 
         top_bar.set_orientation(Gtk::Orientation::HORIZONTAL);
         top_bar.append(text_input);

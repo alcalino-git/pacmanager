@@ -122,6 +122,7 @@ class PackageDatabase {
         if (sorter == Sorter::INSTALLED_SIZE) {PackageDatabase::sort_by_installed_size(&result);}
         if (sorter == Sorter::INSTALLED_DATE) {PackageDatabase::sort_by_installed_date(&result);}
 
+        std::cout << "Finished query for \'" << query << "\'\n";
         //this->mtx.unlock();
         return result;
     }
