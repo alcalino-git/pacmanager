@@ -28,7 +28,6 @@ time_t string_to_date(string date_str) {
     ss >> std::get_time(&tm, "%a %d %b %Y %I:%M:%S %p");
 
     if (ss.fail()) {
-        std::cerr << "Failed to parse date string!" << std::endl;
         return 1;
     }
 
@@ -106,77 +105,77 @@ class Package {
     unordered_map<string, string> properties;
 
     public:
-    /// @brief Uses `pacman -Ss to search for packages`
-    /// @param s string pacman -Ss will use
-    /// @return a list of found packages
-    static vector<Package> search_packages(std::string search, Filter f, Sorter sort) {
+    // /// @brief Uses `pacman -Ss to search for packages`
+    // /// @param s string pacman -Ss will use
+    // /// @return a list of found packages
+    // static vector<Package> search_packages(std::string search, Filter f, Sorter sort) {
 
-        string command;
-        command = "pacman -Ss \"" + search + "\"";
+    //     string command;
+    //     command = "pacman -Ss \"" + search + "\"";
 
-        std::cout << "SEARCHING WITH COMMAND: " << command << "\n";
+    //     std::cout << "SEARCHING WITH COMMAND: " << command << "\n";
 
-        auto lines = get_command_line_output(command);
+    //     auto lines = get_command_line_output(command);
 
-        std::cout << "GOT " << lines.size() << " packages\n";
+    //     std::cout << "GOT " << lines.size() << " packages\n";
 
-        vector<Package> packages{};
-        for (int i = 0; i < lines.size(); i++) {
-            if (i % 2 != 0) {continue;}
-            if (f == Filter::EVERYTHING || (lines[i].contains("installed") == (f == Filter::INSTALLED) )) {
-                auto package = Package(lines[i]);
-                packages.push_back(package);
-            }
-        }
+    //     vector<Package> packages{};
+    //     for (int i = 0; i < lines.size(); i++) {
+    //         if (i % 2 != 0) {continue;}
+    //         if (f == Filter::EVERYTHING || (lines[i].contains("installed") == (f == Filter::INSTALLED) )) {
+    //             auto package = Package(lines[i]);
+    //             packages.push_back(package);
+    //         }
+    //     }
 
-        if (sort == Sorter::NONE) {return packages;}
+    //     if (sort == Sorter::NONE) {return packages;}
 
-        //Preemptively fetch the required properties in parallaler for better performance
-        vector<jthread> threads;
-        int batch_size = std::ceil((float)packages.size() / (float)std::thread::hardware_concurrency()) ;
-        for (int i = 0; i < std::thread::hardware_concurrency(); i++) {
-            threads.emplace_back([&packages, i, batch_size]() {
+    //     //Preemptively fetch the required properties in parallaler for better performance
+    //     vector<jthread> threads;
+    //     int batch_size = std::ceil((float)packages.size() / (float)std::thread::hardware_concurrency()) ;
+    //     for (int i = 0; i < std::thread::hardware_concurrency(); i++) {
+    //         threads.emplace_back([&packages, i, batch_size]() {
 
-                int start = batch_size * i;
-                int end = (batch_size) * (i+1);
-                std::cout << start <<  "..." << end << "\n";
-                for (int k = start; k < end; k++) {
-                    if (k >= packages.size()) {break;}
-                    packages[k].get_property("Installed Size");
-                    packages[k].get_property("Install Date");
-                }
-            });
+    //             int start = batch_size * i;
+    //             int end = (batch_size) * (i+1);
+    //             std::cout << start <<  "..." << end << "\n";
+    //             for (int k = start; k < end; k++) {
+    //                 if (k >= packages.size()) {break;}
+    //                 packages[k].get_property("Installed Size");
+    //                 packages[k].get_property("Install Date");
+    //             }
+    //         });
 
-        }
+    //     }
 
-        if (sort == Sorter::INSTALLED_SIZE) {
-            std::sort(packages.begin(), packages.end(), [](auto a, auto b) {
-                string a_size = a.get_property("Installed Size");;
-                string b_size = b.get_property("Installed Size");;
+    //     if (sort == Sorter::INSTALLED_SIZE) {
+    //         std::sort(packages.begin(), packages.end(), [](auto a, auto b) {
+    //             string a_size = a.get_property("Installed Size");;
+    //             string b_size = b.get_property("Installed Size");;
 
-                float a_float = std::stof(a_size);
-                float b_float = std::stof(b_size);
-                if (split_by_char(a_size, ' ')[1] == "MiB") {a_float *= 1024;}
-                if (split_by_char(b_size, ' ')[1] == "MiB") {b_float *= 1024;}
+    //             float a_float = std::stof(a_size);
+    //             float b_float = std::stof(b_size);
+    //             if (split_by_char(a_size, ' ')[1] == "MiB") {a_float *= 1024;}
+    //             if (split_by_char(b_size, ' ')[1] == "MiB") {b_float *= 1024;}
                 
-                return a_float > b_float;
-            });
-        }
+    //             return a_float > b_float;
+    //         });
+    //     }
 
-        if (sort == Sorter::INSTALLED_DATE) {
-            std::sort(packages.begin(), packages.end(), [](auto a, auto b) {
-                string a_date_str = a.get_property("Install Date");
-                string b_date_str = b.get_property("Install Date");
+    //     if (sort == Sorter::INSTALLED_DATE) {
+    //         std::sort(packages.begin(), packages.end(), [](auto a, auto b) {
+    //             string a_date_str = a.get_property("Install Date");
+    //             string b_date_str = b.get_property("Install Date");
 
-                if (a_date_str == "") {return false;}
-                if (b_date_str == "") {return true;} 
+    //             if (a_date_str == "") {return false;}
+    //             if (b_date_str == "") {return true;} 
                 
-                return string_to_date(a_date_str) > string_to_date(b_date_str);
-            });
-        }
+    //             return string_to_date(a_date_str) > string_to_date(b_date_str);
+    //         });
+    //     }
 
-        return packages;
-    }
+    //     return packages;
+    // }
 
     static unordered_map<string, string> get_package_properties(string name) {
         unordered_map<string, string> result;

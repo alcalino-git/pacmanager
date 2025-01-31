@@ -130,6 +130,7 @@ class PackageDisplay : public Gtk::Box {
                 this->error_dialog(action_string, status);
             }
             Glib::signal_idle().connect_once([this](){
+                this->package.refetch_data();
                 this->render();
             });
         }).detach();
@@ -205,6 +206,7 @@ class PackageDisplay : public Gtk::Box {
 
     void set_package(Package package) {
         this->package = package;
+        this->package.refetch_data();
         //this->installing = false;
         this->initialized = true;
         this->render();

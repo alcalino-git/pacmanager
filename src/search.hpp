@@ -9,6 +9,7 @@
 #include <iostream>
 #include <bits/stdc++.h>
 #include "package.hpp"
+#include "database.hpp"
 using namespace std;
 
 #define PACKAGES_PER_PAGE 100
@@ -38,6 +39,35 @@ Filter textToFilter(string s) {
 }
 
 
+//{"Default Sort", "Sort By Installed Size", "Sort By Install Date"}
+string sorterToText(Sorter s) {
+    switch (s) {
+        case NONE:
+            return "Default Sort";
+            break;
+        case INSTALLED_SIZE:
+            return "Sort By Installed Size";
+            break;
+        case INSTALLED_DATE:
+            return "Sort By Install Date";
+            break;
+    }
+}
+
+Sorter textToSorter(string text) {
+    if (text == "Default Sort") {
+        return NONE;
+    } else if (text == "Sort By Installed Size") {
+        return INSTALLED_SIZE;
+    } else if (text == "Sort By Install Date") {
+        return INSTALLED_DATE;
+    } else {
+        throw invalid_argument("Unknown sort type: " + text);
+    }
+}
+
+
+
 
 class SearchComponent : public Gtk::Box {
 
@@ -57,17 +87,20 @@ class SearchComponent : public Gtk::Box {
     Gtk::ScrolledWindow scroll;
     Gtk::Box packages_components;
     Gtk::Box top_bar;
+    Gtk::Box search_options;
     Gtk::Button page_up;
     Gtk::Button page_down;
     Gtk::Label page_label;
     Gtk::Label range_label;
     Gtk::Spinner spinner;
     Gtk::DropDown filter_selector;
+    Gtk::DropDown sorter_selector;
     
+    PackageDatabase database;
     bool is_loading;
     Filter filter_state;
-    Sorter sort_state;
-    vector<Package> packages;
+    Sorter sorter_state;
+    vector<Package*> packages;
     std::mutex mutex;
     std::jthread worker;
     int page;
@@ -82,9 +115,10 @@ class SearchComponent : public Gtk::Box {
 
         this->worker = std::jthread([this, query](std::stop_token stopToken) {
             auto filter_state = this->filter_state;
+            auto sorter_state = this->sorter_state;
 
 
-            auto packages = Package::search_packages(query, filter_state, sort_state);
+            auto packages = this->database.query_database(query, filter_state, sorter_state);
             std::cout << "Query for " << query << " recieved " << packages.size() << " packages\n"; 
 
 
@@ -98,8 +132,8 @@ class SearchComponent : public Gtk::Box {
                 return; //Do nothing
             }
 
-
             this->mutex.lock();
+
             this->packages = packages;
             this->page = 1;
 
@@ -124,8 +158,10 @@ class SearchComponent : public Gtk::Box {
     SearchComponent() {
         this->page = 1;
         this->filter_state = Filter::EVERYTHING;
-        this->sort_state = Sorter::NONE;
+        this->sorter_state = Sorter::NONE;
+        //this->database = PackageDatabase();
 
+        this->set_margin(10);
 
         spinner.start();
         spinner.set_size_request(100,100);
@@ -133,13 +169,25 @@ class SearchComponent : public Gtk::Box {
         set_orientation(Gtk::Orientation::VERTICAL);
         set_vexpand(true);
 
-        auto list_store = Gtk::StringList::create({"Everything", "Installed", "Not installed"});
-        filter_selector.set_model(list_store); // Gtk::DropDown
+        auto filter_store = Gtk::StringList::create({"Everything", "Installed", "Not installed"});
+        filter_selector.set_model(filter_store); // Gtk::DropDown
 
         Glib::signal_idle().connect([this]() {
             auto string_selection = GTK_STRING_OBJECT(gtk_drop_down_get_selected_item(filter_selector.gobj()));
             if (this->filter_state != textToFilter(gtk_string_object_get_string(string_selection)) ) {
                 this->filter_state = textToFilter(gtk_string_object_get_string(string_selection));
+                this->handle_input_submit();
+            }
+            return true;
+        });
+
+        auto sorter_store = Gtk::StringList::create({"Default Sort", "Sort By Installed Size", "Sort By Install Date"});
+        sorter_selector.set_model(sorter_store);
+
+        Glib::signal_idle().connect([this](){
+            auto string_selection = GTK_STRING_OBJECT(gtk_drop_down_get_selected_item(sorter_selector.gobj()));
+            if (this->sorter_state != textToSorter(gtk_string_object_get_string(string_selection)) ) {
+                this->sorter_state = textToSorter(gtk_string_object_get_string(string_selection));
                 this->handle_input_submit();
             }
             return true;
@@ -164,15 +212,18 @@ class SearchComponent : public Gtk::Box {
         text_input.signal_changed().connect([this]() {this->handle_input_submit();});
 
         top_bar.set_orientation(Gtk::Orientation::HORIZONTAL);
-        top_bar.append(filter_selector);
         top_bar.append(text_input);
         top_bar.append(page_down);
         top_bar.append(page_label);
         top_bar.append(page_up);
 
+        search_options.append(filter_selector);
+        search_options.append(sorter_selector);
+
         scroll.set_vexpand(true);
 
         this->append(top_bar);
+        this->append(search_options);
         this->append(found_label);
         this->append(range_label);
         this->append(scroll);
@@ -202,7 +253,7 @@ class SearchComponent : public Gtk::Box {
 
         for (int i = start; i < end; i++ ) {
             auto p = this->packages[i];
-            auto label = Gtk::manage( new PackageButton(p) );
+            auto label = Gtk::manage( new PackageButton(*p) );
 
             label->signal_clicked().connect([this, p, label](){
                 std::jthread([this, label](){
