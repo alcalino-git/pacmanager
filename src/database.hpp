@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <mutex>
 #include <unordered_set>
 #include <boost/algorithm/string.hpp>
 
@@ -11,6 +12,7 @@ using namespace std;
 using namespace boost::algorithm;
 
 class PackageDatabase {
+    std::mutex mtx; //Database mutex because duh
     unordered_map<string, Package> packages;
     unordered_set<string> installed_packages;
 
@@ -80,30 +82,32 @@ class PackageDatabase {
         }
     }
 
-    static void sort_by_installed_size(vector<Package*>* packages) {
-        std::sort(packages->begin(), packages->end(), [](Package* a, Package* b){
-            auto a_size = std::stof(a->get_property("Installed Size"));
-            auto b_size = std::stof(b->get_property("Installed Size"));
+    static void sort_by_installed_size(vector<Package>* packages) {
+        std::sort(packages->begin(), packages->end(), [](Package a, Package b){
+            auto a_size = std::stof(a.get_property("Installed Size"));
+            auto b_size = std::stof(b.get_property("Installed Size"));
 
-            if (a->get_property("Installed Size").contains("MiB")) {a_size*=1024;}
-            if (b->get_property("Installed Size").contains("MiB")) {b_size*=1024;}
+            if (a.get_property("Installed Size").contains("MiB")) {a_size*=1024;}
+            if (b.get_property("Installed Size").contains("MiB")) {b_size*=1024;}
 
             return a_size > b_size;
         });
     }
 
-    static void sort_by_installed_date(vector<Package*>* packages) {
-        std::sort(packages->begin(), packages->end(), [](Package* a, Package* b){
-            auto a_date = string_to_date(a->get_property("Install Date"));
-            auto b_date = string_to_date(b->get_property("Install Date"));
+    static void sort_by_installed_date(vector<Package>* packages) {
+        std::sort(packages->begin(), packages->end(), [](Package a, Package b){
+            auto a_date = string_to_date(a.get_property("Install Date"));
+            auto b_date = string_to_date(b.get_property("Install Date"));
 
             return a_date > b_date;
         });
     }
 
-    vector<Package*> query_database(string query, Filter filter, Sorter sorter) {
+    vector<Package> query_database(string query, Filter filter, Sorter sorter) {
+        //this->mtx.lock();
+        std::cout << "Processing query for \'" << query << "\'\n";
         auto queried_packages = get_command_line_output("pacman -Ss " + query);
-        vector<Package*> result;
+        vector<Package> result;
 
         for (int i = 0; i < queried_packages.size(); i+=2) {
             auto name = split_by_char(split_by_char(queried_packages[i], ' ')[0], '/')[1];
@@ -112,12 +116,13 @@ class PackageDatabase {
             if (filter == Filter::NOT_INSTALLED && this->installed_packages.contains(name)) {continue;}
 
 
-            result.push_back(&this->packages[name]);
+            result.push_back(this->packages[name]);
         }
 
         if (sorter == Sorter::INSTALLED_SIZE) {PackageDatabase::sort_by_installed_size(&result);}
         if (sorter == Sorter::INSTALLED_DATE) {PackageDatabase::sort_by_installed_date(&result);}
 
+        //this->mtx.unlock();
         return result;
     }
 };

@@ -138,8 +138,8 @@ class PackageDisplay : public Gtk::Box {
                 this->error_dialog(action_string, status);
             }
             this->package.refetch_data();
+            this->signal_update().emit(this->package);
             Glib::signal_idle().connect_once([this](){
-                this->signal_update().emit(this->package);
                 this->render();
             });
         }).detach();

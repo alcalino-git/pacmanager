@@ -39,40 +39,40 @@ int main() {
     }
     cout << "\n\nQUERY FOR \'pacman\'\n";
     for (auto p: packages) {
-        std::cout << p->get_property("Name") << "\n";
+        std::cout << p.get_property("Name") << "\n";
     }
 
     packages = database->query_database("pacman", Filter::INSTALLED, Sorter::NONE);
     cout << "\n\nQUERY FOR \'pacman\' (INSTALLED ONLY)\n";
     for (auto p: packages) {
-        std::cout << p->get_property("Name") << "\n";
+        std::cout << p.get_property("Name") << "\n";
     }
 
     packages = database->query_database("pacman", Filter::NOT_INSTALLED, Sorter::NONE);
     cout << "\n\nQUERY FOR \'pacman\' (NOT INSTALLED ONLY)\n";
     for (auto p: packages) {
-        std::cout << p->get_property("Name") << "\n";
+        std::cout << p.get_property("Name") << "\n";
     }
 
     packages = database->query_database("pacman", Filter::EVERYTHING, Sorter::INSTALLED_SIZE);
     cout << "\n\nQUERY FOR \'pacman\' (SORT BY INSTALLED_SIZE)\n";
     for (auto p: packages) {
-        std::cout << p->get_property("Name") << "\n";
-        std::cout << p->get_property("Installed Size") << "\n";
+        std::cout << p.get_property("Name") << "\n";
+        std::cout << p.get_property("Installed Size") << "\n";
     }
 
     packages = database->query_database("pacman", Filter::EVERYTHING, Sorter::INSTALLED_DATE);
     cout << "\n\nQUERY FOR \'pacman\' (SORT BY INSTALLED_DATE)\n";
     for (auto p: packages) {
-        std::cout << p->get_property("Name") << "\n";
-        std::cout << "date: " << p->get_property("Install Date") << "\n";
+        std::cout << p.get_property("Name") << "\n";
+        std::cout << "date: " << p.get_property("Install Date") << "\n";
     }
 
     packages = database->query_database("", Filter::EVERYTHING, Sorter::INSTALLED_DATE);
     cout << "\n\nQUERY FOR \'\' (SORT BY INSTALLED_DATE)\n";
     for (auto p: packages) {
-        std::cout << p->get_property("Name") << "\n";
-        std::cout << "date: " << p->get_property("Install Date") << "\n";
+        std::cout << p.get_property("Name") << "\n";
+        std::cout << "date: " << p.get_property("Install Date") << "\n";
     }
 
 

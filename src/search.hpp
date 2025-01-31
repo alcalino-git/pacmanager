@@ -102,7 +102,7 @@ class SearchComponent : public Gtk::Box {
     bool inverse_order;
     Filter filter_state;
     Sorter sorter_state;
-    vector<Package*> packages;
+    vector<Package> packages;
     std::mutex mutex;
     std::jthread worker;
     int page;
@@ -267,8 +267,11 @@ class SearchComponent : public Gtk::Box {
         range_label.set_text("Rendering packages " + std::to_string(start) + "-" + std::to_string(end));
 
         for (int i = start; i < end; i++ ) {
+            //`this->packages` might be overwritten mid-rendering
+            if (i >= packages.size()) {break;}
             auto p = this->packages[i];
-            auto label = Gtk::manage( new PackageButton(*p) );
+
+            auto label = Gtk::manage( new PackageButton(p) );
 
             label->signal_clicked().connect([this, p, label](){
                 std::jthread([this, label](){
