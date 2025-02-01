@@ -132,7 +132,7 @@ class SearchComponent : public Gtk::Box {
             if (stopToken.stop_requested()) {
                 //std::cout << "THREAD STOPPED\n";
                 Glib::signal_idle().connect_once([this]() {
-                    this->is_loading = true;
+                    this->is_loading = false;
                     this->render();
                 });
 
