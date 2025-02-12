@@ -7,12 +7,22 @@ Pacmanager is a simple GUI wrapper for the pacman package manager intended for u
 ### Capabilities
 - Search for packages on the remote repos
 - Filter packages by status
+- Sort packages by their properties
 - View info about packages
 - Install and update packages
 - Perform full system updates
 - Remove local packages
 - Ability to display package installation progress in the UI
 
+### Pending
+- Some package properties are not displayed
+- The program creates no logs at all
+
+### Known issues
+- Repeteadly activating the search bar in quick sucession causes the program to become unstable as every query must complete before the next one can begin. Adittionally, each query requires launching a new thread
+- Repeteadly activating the search bar in quick sucession might cause the loading spinner to not appear at all. This does not affect functionality but does make the process appear frozen for a few seconds
+  
+*If you find any more bugs, be sure to report them to the `issues` section*
 
 ## Instalation
 #### AUR
