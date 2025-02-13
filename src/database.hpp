@@ -1,5 +1,6 @@
 #pragma once
 
+#include <iostream>
 #include <unordered_map>
 #include <string>
 #include <mutex>
@@ -25,14 +26,14 @@ class PackageDatabase {
     /**
      * Creates an in-memory representation of the entire pacman database
      * This includes properties of any given package
-     * 
+     *
      * It is guaranteed that every package in `this->packages` will be valid and will have all of its properties populated
      * @warning: This method is extremely expensive
      */
     void populate_database() {
         vector<string> database_lines = get_command_line_output("pacman -Si");
         database_lines.push_back("");
-        
+
         for (auto temp_line: get_command_line_output("pacman -Qi")) {
             database_lines.push_back(temp_line);
         }
@@ -64,7 +65,7 @@ class PackageDatabase {
 
     void populate_installed_packages() {
         auto installed = get_command_line_output("pacman -Ss");
-        
+
         for (int i = 0; i < installed.size(); i+=2) {
             if (installed[i].contains("[installed]")) {
                 this->installed_packages.insert(  split_by_char(split_by_char(installed[i], ' ')[0], '/')[1]  );

@@ -5,4 +5,4 @@ build
 PKGBUILD
 .github/workflows/.secrets
 *.txt
-.cache/clangd/index
+.cache

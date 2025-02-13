@@ -2,18 +2,15 @@
 #pragma once
 
 #include <string>
-#include <thread>
 #include <vector>
 #include <unordered_map>
-#include <iostream>
-#include <fstream>
 #include <sstream>
 #include <iomanip>
 #include <ctime>
 #include <cmath>
 
-#include <sqlite3.h> 
-#include <boost/algorithm/string.hpp> 
+#include <sqlite3.h>
+#include <boost/algorithm/string.hpp>
 
 
 
@@ -57,8 +54,8 @@ vector<string> split_by_char(string s, char c) {
 
 
 /// @brief Runs `command` and returns its full output. Highly blocking
-/// @param command 
-/// @return 
+/// @param command
+/// @return
 vector<string> get_command_line_output(string command) {
     FILE *result;
     result = popen(command.c_str(), "r");
@@ -100,7 +97,7 @@ enum Sorter {
 };
 
 class Package {
-    
+
     private:
     unordered_map<string, string> properties;
 
@@ -157,7 +154,7 @@ class Package {
     //             float b_float = std::stof(b_size);
     //             if (split_by_char(a_size, ' ')[1] == "MiB") {a_float *= 1024;}
     //             if (split_by_char(b_size, ' ')[1] == "MiB") {b_float *= 1024;}
-                
+
     //             return a_float > b_float;
     //         });
     //     }
@@ -168,8 +165,8 @@ class Package {
     //             string b_date_str = b.get_property("Install Date");
 
     //             if (a_date_str == "") {return false;}
-    //             if (b_date_str == "") {return true;} 
-                
+    //             if (b_date_str == "") {return true;}
+
     //             return string_to_date(a_date_str) > string_to_date(b_date_str);
     //         });
     //     }
@@ -189,7 +186,7 @@ class Package {
         auto lines = get_command_line_output(command);
         string last_key = "";
         string property_value = "";
-        
+
         for (auto line: lines) {
             if (line.contains(":")) {
                 auto parts = split_by_char(line, ':');
@@ -230,7 +227,7 @@ class Package {
     /**
      * Gets a property of the package
      * @param key The property to fetch
-     * @returns A string with the selected property, or "" if it doesn't exist 
+     * @returns A string with the selected property, or "" if it doesn't exist
      */
     string get_property(string key) {
         // if (!this->properties.count(key)) {
@@ -238,10 +235,10 @@ class Package {
         // }
         // if (!this->properties.count(key)) {
         //     this->properties[key] = "";
-        // } 
+        // }
         return this->properties[key];
     }
-    
+
 
     void refetch_data() {
         this->properties = Package::get_package_properties( this->properties["Name"] );
@@ -249,7 +246,7 @@ class Package {
 
     /// @brief Extracts the raw name from the package (no repo or [installed])
     /// @param denominator a denominator string of shape `[database]/[package-name]`
-    /// @return 
+    /// @return
     static string extract_name(string denominator) {
         return  split_by_char(split_by_char(denominator, ' ')[0], '/')[1];
     }

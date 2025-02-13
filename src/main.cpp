@@ -1,7 +1,5 @@
 #include "glibmm/main.h"
-#include <stdio.h>
 #include <gtkmm.h>
-#include <thread>
 #include "./search.hpp"
 #include "gtkmm/box.h"
 #include "gtkmm/enums.h"
