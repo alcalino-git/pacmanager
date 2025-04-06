@@ -85,8 +85,15 @@ class PackageDatabase {
 
     static void sort_by_installed_size(vector<Package>* packages) {
         std::sort(packages->begin(), packages->end(), [](Package a, Package b){
-            auto a_size = std::stof(a.get_property("Installed Size"));
-            auto b_size = std::stof(b.get_property("Installed Size"));
+        	float a_size = 0;
+         	float b_size = 0;
+
+          	try {
+	            a_size = std::stof(a.get_property("Installed Size"));
+	            b_size = std::stof(b.get_property("Installed Size"));
+           	} catch (...) {
+
+            }
 
             if (a.get_property("Installed Size").contains("MiB")) {a_size*=1024;}
             if (b.get_property("Installed Size").contains("MiB")) {b_size*=1024;}
@@ -109,6 +116,8 @@ class PackageDatabase {
         std::cout << "Processing query for \'" << query << "\'\n";
         auto queried_packages = get_command_line_output("pacman -Ss " + query);
         vector<Package> result;
+
+        cout << "obtained queried packages command line output with " << queried_packages.size() << " packages\n";
 
         for (int i = 0; i < queried_packages.size(); i+=2) {
             auto name = split_by_char(split_by_char(queried_packages[i], ' ')[0], '/')[1];
