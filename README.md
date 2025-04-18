@@ -1,6 +1,11 @@
 # Pacmanager
 <img src="logo.svg" alt="drawing" width="200"/>
 
+# ⚠️ This project has been rewritten ⚠️
+A full rewrite of this project can now be found in the [pacmanager-rs](https://github.com/alcalino-git/pacmanager-rs) repository, as the name indicates, it is written in rust 🦀 and features robust memory safety 💪 that fixex any and all segmentation faults found on this version
+
+--- 
+
 ### Description
 Pacmanager is a simple GUI wrapper for the pacman package manager intended for use on Arch or Arch-based systems
 
